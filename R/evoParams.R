@@ -747,29 +747,27 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
   time_elements <- get_time_elements(object,time_range)
   spec_n <- apply(object@n[time_elements,,,drop=FALSE],c(2,3), mean)
   pkt_n <- apply(object@n_pp[time_elements,,drop=FALSE],2,mean)
-  alg_n <- apply(object@n_aa[time_elements,,drop=FALSE],2,mean)
-  ben_n <- apply(object@n_bb[time_elements,,drop=FALSE],2,mean)
+  # alg_n <- apply(object@n_aa[time_elements,,drop=FALSE],2,mean)
+  # ben_n <- apply(object@n_bb[time_elements,,drop=FALSE],2,mean)
   
-  y_axis_name = "Abundance"
+  y_axis_name = "Abundance density in individuals.m^-3"
   if (biomass){
     spec_n <- sweep(spec_n,2,object@params@w,"*")
     pkt_n <- pkt_n * object@params@w_full
-    alg_n <- alg_n * object@params@w_full
-    ben_n <- ben_n * object@params@w_full
-    y_axis_name = "Biomass"
+    # alg_n <- alg_n * object@params@w_full
+    # ben_n <- ben_n * object@params@w_full
+    y_axis_name = "Biomass in g.m^-3"
   }
   # Make data.frame for plot
-  plot_datSP <- data.frame(value = c(spec_n), Species = dimnames(spec_n)[[1]], w = rep(object@params@w, each=nrow(object@params@species_params)), bloodline = object@params@species_params$species)
+  plot_datSP <- data.frame(value = c(spec_n), Species = dimnames(spec_n)[[1]], w = rep(object@params@w, each=nrow(object@params@species_params)), lineage = object@params@species_params$lineage)
   plot_datPkt <- data.frame(value = c(pkt_n), Species = "Phytoplankton", w = object@params@w_full)
-  plot_datAlg <- data.frame(value = c(alg_n), Species = "Algae", w = object@params@w_full)
-  plot_datBen <- data.frame(value = c(ben_n), Species = "Benthos", w = object@params@w_full)
+  # plot_datAlg <- data.frame(value = c(alg_n), Species = "Algae", w = object@params@w_full)
+  # plot_datBen <- data.frame(value = c(ben_n), Species = "Benthos", w = object@params@w_full)
   
-  if(community) plot_datSP <- data.frame(value = apply(spec_n, 2, sum), w = object@params@w)
-  
-  else if (species)
+  if(community) plot_datSP <- data.frame(value = apply(spec_n, 2, sum), w = object@params@w) else if (species)
   {
-    dimnames(spec_n)$species = object@params@species_params$species
-    SpIdx = unique(object@params@species_params$species)
+    dimnames(spec_n)$sp = object@params@species_params$lineage
+    SpIdx = unique(object@params@species_params$lineage)
     spec_sp = matrix(data = NA, ncol = dim(spec_n)[2], nrow = length(SpIdx), dimnames = list(as.character(SpIdx),dimnames(spec_n)$size))
     names(dimnames(spec_sp))=list("species","size")
     
@@ -785,8 +783,8 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
   # lop off 0s in background and apply min_w
   plot_datSP <- plot_datSP[(plot_datSP$value > 0) & (plot_datSP$w >= min_w),]
   plot_datPkt <- plot_datPkt[(plot_datPkt$value > 0) & (plot_datPkt$w >= min_w),]
-  plot_datAlg <- plot_datAlg[(plot_datAlg$value > 0) & (plot_datAlg$w >= min_w),]
-  plot_datBen <- plot_datBen[(plot_datBen$value > 0) & (plot_datBen$w >= min_w),]
+  # plot_datAlg <- plot_datAlg[(plot_datAlg$value > 0) & (plot_datAlg$w >= min_w),]
+  # plot_datBen <- plot_datBen[(plot_datBen$value > 0) & (plot_datBen$w >= min_w),]
   #getPalette = colorRampPalette(brewer.pal(9, "Set1"))# increase the number of colors used
   
   if(community)
@@ -794,10 +792,10 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
     p <- ggplot(plot_datSP) + 
       geom_line(aes(x=w, y = value)) + 
       geom_line(data = plot_datPkt, aes(x = w, y = value, group = Species),alpha = 0.5, color = "blue", size = 1.5) +
-      geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
-      geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
+      # geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
+      # geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
       scale_x_continuous(name = "Size in g", trans = "log10", breaks = c(1 %o% 10^(-6:5)))+
-      scale_y_continuous(name = "Abundance density in individuals.m^-3", limits = ylim, trans = "log10") +
+      scale_y_continuous(name = y_axis_name, limits = ylim, trans = "log10") +
       # labs(color='Species') +
       theme(panel.background = element_rect(fill = "white", color = "black"),
             panel.grid.minor = element_line(colour = "grey92"),
@@ -810,10 +808,10 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
     p <- ggplot(plot_datSP) + 
       geom_line(aes(x=w, y = value, colour = as.factor(Species), group = Species)) + 
       geom_line(data = plot_datPkt, aes(x = w, y = value, group = Species),alpha = 0.5, color = "blue", size = 1.5) +
-      geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
-      geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
+      # geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
+      # geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
       scale_x_continuous(name = "Size in g", trans = "log10", breaks = c(1 %o% 10^(-6:5)))+
-      scale_y_continuous(name = "Abundance density in individuals.m^-3", limits = ylim, trans = "log10") +
+      scale_y_continuous(name = y_axis_name, limits = ylim, trans = "log10") +
       labs(color='Species') +
       theme(panel.background = element_rect(fill = "white", color = "black"),
             panel.grid.minor = element_line(colour = "grey92"),
@@ -825,18 +823,18 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
   else
   {
     p <- ggplot(plot_datSP) + 
-      geom_line(aes(x=w, y = value, colour = as.factor(bloodline), group = Species)) + 
+      geom_line(aes(x=w, y = value, colour = as.factor(lineage), group = Species)) + 
       geom_line(data = plot_datPkt, aes(x = w, y = value, group = Species),alpha = 0.5, color = "blue", size = 1.5) +
-      geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
-      geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
+      # geom_line(data = plot_datAlg, aes(x = w, y = value, group = Species),alpha = 0.5, color = "green", size = 1.5) +
+      # geom_line(data = plot_datBen, aes(x = w, y = value, group = Species),alpha = 0.5, color = "yellow", size = 1.5) +
       scale_x_continuous(name = "Size in g", trans = "log10", breaks = c(1 %o% 10^(-6:5)))+
-      scale_y_continuous(name = "Abundance density in individuals.m^-3", limits = ylim, trans = "log10") +
+      scale_y_continuous(name = y_axis_name, limits = ylim, trans = "log10") +
       labs(color='Species') +
       theme(panel.background = element_rect(fill = "white", color = "black"),
             panel.grid.minor = element_line(colour = "grey92"),
             legend.key = element_rect(fill = "white"))+
       scale_colour_manual(values=cbPalette)+ # colorblind
-      ggtitle("Size spectrum")
+      ggtitle("Size spectrum per phenotypes")
     
   }
   if(save_it) ggsave(plot = p, filename = nameSave, scale = 1.5)
@@ -916,38 +914,49 @@ plotFood <- function(object, time_range = max(as.numeric(dimnames(object@n)$time
   feed_time <- getFeedingLevel(object=object, time_range=time_range, drop=FALSE) #, ...) # get the feeding time
   feed <- apply(feed_time, c(2,3), mean) # average on the time frame
   
-  Cfeed_time <- getCriticalFeedingLevel(object=object, time_range=time_range, drop=FALSE)#, ...) # get the critical feeding level
-  Critfeed <- apply(Cfeed_time, c(2,3), mean) # average on the time frame
-  Critfeed <- Critfeed[1,] # all rows the same
-  
+  Cfeed <- getCriticalFeedingLevel(object@params)#, ...) # get the critical feeding level
+
   if (species) # if I want to display species instead of ecotypes
   {
-    dimnames(feed)$sp = object@params@species_params$species
-    SpIdx = sort(unique(object@params@species_params$species)) # get the species names
+    dimnames(feed)$sp = object@params@species_params$lineage
+    SpIdx = sort(unique(object@params@species_params$lineage)) # get the species names
     feed_sp = matrix(data = NA, ncol = dim(feed)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(feed)$w)) # prepare the new object
+    Cfeed_sp = matrix(data = NA, ncol = dim(feed)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(feed)$w)) # prepare the new object
+    
     names(dimnames(feed_sp))=list("species","size")
+    names(dimnames(Cfeed_sp))=list("species","size")
+    
     
     for (i in SpIdx)
     {
+      #feeding level
       temp = feed # save to manip
       temp[which(rownames(feed) != i), ] = 0 # keep the ecotypes from the species only
       temp = apply(temp, 2, sum)
       temp = temp / length(which(rownames(feed)==i)) # do the mean (in 2 steps)
       feed_sp[which(rownames(feed_sp)==i), ] = temp
+      
+      #critical feeding
+      temp = Cfeed # save to manip
+      temp[which(rownames(Cfeed) != i), ] = 0 # keep the ecotypes from the species only
+      temp = apply(temp, 2, sum)
+      temp = temp / length(which(rownames(Cfeed)==i)) # do the mean (in 2 steps)
+      Cfeed_sp[which(rownames(Cfeed_sp)==i), ] = temp
+      
+      
     }
     feed = feed_sp
+    Cfeed = Cfeed_sp
   }
   
   a <- c(object@params@species_params$w_inf[SpIdx]) # to get vline of different col, need to create a data frame
   vlines <- data.frame(xint = a,grp = SpIdx)
   
-  plot_dat <- data.frame(value = c(feed), species = dimnames(feed)[[1]], size = rep(object@params@w, each=length(dimnames(feed)[[1]])))
-  
-  name = paste("Feeding level at time",time_range,sep=" ")
+  plot_dat <- data.frame(value = c(feed),critical = c(Cfeed), species = as.factor(dimnames(feed)[[1]]), size = rep(object@params@w, each=length(dimnames(feed)[[1]])))
   
   p <- ggplot(plot_dat) + 
-    geom_line(aes(x=size, y = value, colour = as.factor(species))) + 
-    geom_hline(yintercept = Critfeed[1], linetype = "dashed", color = "red") +
+    geom_line(aes(x=size, y = value, colour = species)) + 
+    geom_line(aes(x=size, y = critical), linetype = "dashed", color = "red") +
     geom_vline(data = vlines,aes(xintercept = xint,colour = as.factor(grp)), linetype = "dashed") + 
     scale_x_log10(name = "Size", breaks = c(1 %o% 10^(-3:5)))  + 
     scale_y_continuous(name = "Feeding Level", lim=c(0,1))+
@@ -955,9 +964,9 @@ plotFood <- function(object, time_range = max(as.numeric(dimnames(object@n)$time
     theme(panel.background = element_rect(fill = "white", color = "black"),
           panel.grid.minor = element_line(colour = "grey92"),
           legend.key = element_rect(fill = "white"))+
-    ggtitle(name)
+    ggtitle(NULL)
   
-  if(save_it) ggsave(plot = p, filename = nameSave,width = 18, height = 18,units = "cm" )
+  if(save_it) ggsave(plot = p, filename = nameSave,width = 18, height = 18, units = "cm" )
   
   if (returnData) return(list(plot_dat,Critfeed)) else if(print_it) return(p)
 }
@@ -1082,10 +1091,10 @@ plotScythe <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
   if(is.matrix(object@effort)) effort = object@effort[time_range,]
   else effort = object@effort[time_range]
   
-  z <- getZ(object = object@params, n = object@n[time_range,,], n_pp = object@n_pp[time_range,],n_aa = object@n_aa[time_range,],n_bb = object@n_bb[time_range,],
-            effort = effort, 
-            intakeScalar = object@intTempScalar[,,time_range], metScalar = object@metTempScalar[,,time_range], morScalar = object@morTempScalar[,,time_range])
-  dimnames(z)$prey = object@params@species_params$species
+  z <- getZ(object@params, n = object@n[time_range,,], n_pp = object@n_pp[time_range,],#n_aa = object@n_aa[time_range,],n_bb = object@n_bb[time_range,],
+            effort = effort)#, 
+            #intakeScalar = object@intTempScalar[,,time_range], metScalar = object@metTempScalar[,,time_range], morScalar = object@morTempScalar[,,time_range])
+  dimnames(z)$prey = object@params@species_params$lineage
   #SpIdx = sort(unique(object@params@species_params$species)) # get the species names
   
   # need to get rid of the extinct species at that time in SpIdx
@@ -1128,7 +1137,7 @@ plotScythe <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
     theme(legend.key = element_rect(fill = "white"),
           panel.background = element_rect(fill = "white", color = "black"),
           panel.grid.minor = element_line(colour = "grey92"))+
-    ggtitle(name)
+    ggtitle(NULL)
   
   if (returnData) return(plot_dat) else if(print_it) return(p)
 }

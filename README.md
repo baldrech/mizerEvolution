@@ -178,7 +178,119 @@ Checking the average number of phenotypes per species through time.
 
 ![](man/figures/number%20of%20phenotypes-1.png)<!-- -->
 
-Add physio plots here
+## Plot functions
+
+### plotDynamics
+
+plotDynamics output the same results as plotBiomass (species’ biomass
+thorugh time) if the phenotype argument is set to FALSE
+
+``` r
+plotDynamics(sim, phenotype = F)
+```
+
+![](man/figures/plotDynamics%201-1.png)<!-- -->
+
+Showing the phenotypes as semi-transparent lines, with phenotype = TRUE
+(default)
+
+``` r
+plotDynamics(sim, phenotype = T)
+```
+
+![](man/figures/plotDynamics%202-1.png)<!-- -->
+
+The species argument displays all the phenotypes of one species only
+(take species identity as value)
+
+``` r
+plotDynamics(sim,species = 2)
+```
+
+![](man/figures/plotDynamics%203-1.png)<!-- -->
+
+The trait value of the phenotypes can be displayed per phenotypes as a
+continuous gradient, only available when only one species is selected
+
+``` r
+plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
+```
+
+![](man/figures/plotDynamics%204-1.png)<!-- -->
+
+The SpIdx argument selects for a subset of species
+
+``` r
+plotDynamics(sim,SpIdx = c(1,2,3))
+```
+
+![](man/figures/plotDynamics%205-1.png)<!-- -->
+
+### plotSS
+
+The size spectrum plot can display abundance density or biomass with the
+biomass argument
+
+``` r
+
+plotSS(sim,biomass = F)
+```
+
+![](man/figures/unnamed-chunk-1-1.png)<!-- -->
+
+``` r
+
+plotSS(sim,biomass = T)
+```
+
+![](man/figures/unnamed-chunk-1-2.png)<!-- -->
+
+It can also display 3 levels of grouping: community, species, phenotypes
+
+``` r
+
+plotSS(sim, community = T)
+```
+
+![](man/figures/unnamed-chunk-2-1.png)<!-- -->
+
+``` r
+plotSS(sim)
+```
+
+![](man/figures/unnamed-chunk-2-2.png)<!-- -->
+
+``` r
+plotSS(sim, species = F)
+```
+
+![](man/figures/unnamed-chunk-2-3.png)<!-- -->
+
+### Feeding level
+
+``` r
+
+plotFood(sim)
+```
+
+![](man/figures/unnamed-chunk-3-1.png)<!-- -->
+
+### Growth
+
+``` r
+
+plotGrowth(sim)
+```
+
+![](man/figures/unnamed-chunk-4-1.png)<!-- -->
+
+<!-- ## Mortality -->
+
+<!-- ```{r} -->
+
+<!-- plotScythe(sim) -->
+
+<!-- ``` -->
 
 ## Species invasion
 

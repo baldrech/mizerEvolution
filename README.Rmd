@@ -444,14 +444,96 @@ p
 ```
 
 
-Add physio plots here
+## Plot functions
 
+### plotDynamics
 
-```{r, size spectrum, echo = F}
-
-#plotSS(sim)
+plotDynamics output the same results as plotBiomass (species' biomass thorugh time) if the phenotype argument is set to FALSE
+```{r, plotDynamics 1}
+plotDynamics(sim, phenotype = F)
 
 ```
+
+Showing the phenotypes as semi-transparent lines, with phenotype = TRUE (default)
+
+```{r plotDynamics 2}
+plotDynamics(sim, phenotype = T)
+
+```
+
+
+The species argument displays all the phenotypes of one species only (take species identity as value)
+
+```{r plotDynamics 3}
+plotDynamics(sim,species = 2)
+
+```
+
+
+The trait value of the phenotypes can be displayed per phenotypes as a continuous gradient, only available when only one species is selected
+
+```{r plotDynamics 4}
+plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
+
+```
+
+The SpIdx argument selects for a subset of species
+
+```{r plotDynamics 5}
+plotDynamics(sim,SpIdx = c(1,2,3))
+
+```
+
+### plotSS
+
+The size spectrum plot can display abundance density or biomass with the biomass argument
+
+```{r}
+
+plotSS(sim,biomass = F)
+
+plotSS(sim,biomass = T)
+
+```
+
+It can also display 3 levels of grouping: community, species, phenotypes
+
+```{r}
+
+plotSS(sim, community = T)
+plotSS(sim)
+plotSS(sim, species = F)
+
+
+```
+
+
+### Feeding level
+
+```{r}
+
+plotFood(sim)
+
+```
+
+
+### Growth
+
+```{r}
+
+plotGrowth(sim)
+
+```
+
+
+<!-- ## Mortality -->
+
+<!-- ```{r} -->
+
+<!-- plotScythe(sim) -->
+
+<!-- ``` -->
+
 
 
 ## Species invasion
