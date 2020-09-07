@@ -188,10 +188,20 @@ finalTouch <- function(saveFolder,params,t_max)
   tempRun@n <- biomass
   tempRun@effort <- effort
   tempRun@n_pp <- biomassPP
-  tempRun@n_other <- matrix(0, nrow = (t_max+1),ncol = 1, dimnames = list("time" = 1:(t_max+1), "component"))
+  # tempRun@n_other <- matrix(0, nrow = (t_max+1),ncol = 1, dimnames = list("time" = 1:(t_max+1), "component"))
 
+  component_names <- names(params@other_dynamics)
+  no_components <- length(component_names)
+  no_t <- t_max +1
 
-
+  list_n_other <- rep(list(NA), no_t * no_components)
+  dim(list_n_other) <- c(no_t, no_components)
+  dimnames(list_n_other) <- list(time = 1:(t_max+1),
+                                 component = component_names)
+  tempRun@n_other <- list_n_other
+  
+  
+  
   return(tempRun)
 }
 
