@@ -263,8 +263,15 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
   # # corrected_t_event <- t_event+1# need to add 1 per run as they contain a 0 time step (should I get rid of it?)
   # # we know when the mutations will appear, now we need to calculate the different time intervals between these mutations
   t_max_vec <- neighbourDistance(x = c(t_event,t_max))
+  # print("t_max_vec before correction")
+  # print(t_max_vec)
+  
+  if(t_max_vec[length(t_max_vec)] == 0) t_max_vec <- t_max_vec[-length(t_max_vec)] #if mutant happens at last time step the code crashes so remove it
+  
   cat(sprintf('%i mutants will be added\n', (length(t_max_vec)-1)))
+  # print("mutation planned")
   # print(t_mutation)
+  # print("time at mutation")
   # print(t_max_vec)
 
   mySim <- project(params, t_max = t_max_vec[1],progress_bar = F, effort = effort)
@@ -273,7 +280,8 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
   saveRDS(mySim,file= paste(saveFolder,"/run1.rds", sep = ""))
   for(iSim in 2:length(t_max_vec))
   {
-    #print(iSim)
+    # print("iSim")
+    # print(iSim)
     if(is.numeric(mutation))
     {
     ## new mutant param
@@ -443,10 +451,11 @@ n_newSp <- t(initial_n)
     rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
 
     params <- addSpecies(params = params, species_params = newSp, init_n= init_n)
-    if(t_max_vec[iSim]>0) # happens if mutant appears at the last time step, makes the code crash
+    if(t_max_vec[iSim]>0)
+      {# happens if mutant appears at the last time step, makes the code crash | probably obsolete but does not hurt anyone
     mySim <- project(params, t_max = t_max_vec[iSim],progress_bar = F, effort = effort)
-    
     saveRDS(mySim,file= paste(saveFolder,"/run",iSim,".rds", sep = ""))
+    }
   }
 # return(list(saveFolder,params,t_max))
   sim <- finalTouch(saveFolder = saveFolder, params = params, t_max = t_max)
