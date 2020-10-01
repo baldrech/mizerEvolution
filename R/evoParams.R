@@ -251,11 +251,12 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
 # if(t_event[1] == 0) t_event[1] = 1
 #print(t_event)
 #print(t_mutation)
+#print("mutant timeframe generated")
   } else if (is.data.frame(mutation))
   {
     # species invastion case
     t_event <- mutation$time
-    
+    #print("invader timeframe received")
   } else (stop("what do you want from me!? I said, numeric only!"))
   
   # use this if want specific number of mutation
@@ -275,6 +276,7 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
   # print(t_max_vec)
 
   mySim <- project(params, t_max = t_max_vec[1],progress_bar = F, effort = effort)
+  #print("initial projection done")
   if(length(t_max_vec) >1) # if there is at least one mutation planned
   {
   saveRDS(mySim,file= paste(saveFolder,"/run1.rds", sep = ""))
@@ -443,17 +445,20 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
     initial_n[unlist(tapply(params@w,1:no_w,function(wx,w_min)w_min>wx, w_min=mutation$w_min[iSim-1]))] <- 0    
 n_newSp <- t(initial_n)
 }
+    # print("mutant generated")
+    
     newSp$species <-factor(as.character(max(as.numeric(mySim@params@species_params$species))+1), levels = max(as.numeric(mySim@params@species_params$species))+1) # new species name but lineage stays the same
 
     init_n <- rbind(lastBiom,n_newSp) # this include the new mutant as last column
     names(dimnames(init_n)) <- c("sp","w")
     # print(newSp)
     rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
-
     params <- addSpecies(params = params, species_params = newSp, init_n= init_n)
+    # print("mutant integrated in ecosystem, ready to project")
     if(t_max_vec[iSim]>0)
       {# happens if mutant appears at the last time step, makes the code crash | probably obsolete but does not hurt anyone
     mySim <- project(params, t_max = t_max_vec[iSim],progress_bar = F, effort = effort)
+    # print("projected until next mutant, ready to save truncated run")
     saveRDS(mySim,file= paste(saveFolder,"/run",iSim,".rds", sep = ""))
     }
   }
@@ -495,7 +500,6 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   } else {
     inter <- interaction
   }
-
   # combine species params ----
 
   # Move linecolour and linetype into species_params
@@ -509,15 +513,25 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   species_params[missing] <- NA
   missing <- setdiff(names(species_params), names(params@species_params))
   params@species_params[missing] <- NA
-
   # add the new species (with parameters described by species_params),
   # to make a larger species_params dataframe.
   combi_species_params <- rbind(params@species_params, species_params,
                                 stringsAsFactors = FALSE)
+  
+  # fishing params | need to update them here as the default contruction functions will use wrong values / names
+  params@gear_params <- rbind(params@gear_params,params@gear_params[species_params$lineage,]) #copy catchability of parent
+  levels(params@gear_params$species) <- c(levels(params@gear_params$species),as.character(species_params$species)) # add new factor level (new mutant)
+  params@gear_params$species[dim(params@gear_params)[1]] <- species_params$species # correct the mutant name
+  
   # new params object ----
   # use dataframe and global settings from params to make a new MizerParams
   # object.
   # TODO going to need to check if params need to be updated with the new sp or not
+  # print(3.5)
+  # print(params@initial_effort)
+  # print(params@gear_params)
+  # print("catch addspecies")
+  # print(params@catchability)
   p <- newMultispeciesParams(
     combi_species_params,
     interaction = inter,
@@ -526,6 +540,9 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
     min_w_pp = min(params@w_full),
     no_w = length(params@w),
     initial_effort = params@initial_effort,
+    gear_params = params@gear_params,
+    # selectivity = params@selectivity,
+    # catchability = params@catchability,
     RDD = params@rates_funcs$RDD
   )
   # Use the same resource spectrum as params
@@ -536,7 +553,6 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   p@resource_params <- params@resource_params
   # Preserve comment
   comment(p) <- comment(params)
-
   # initial solution ----
   #TODO set initial_N of new sp as a parameters (like 5% of parent and such)
   # p@initial_n[old_sp, ] <- params@initial_n
@@ -994,7 +1010,7 @@ plotGrowth <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
                        nameSave = "Growth.png",...){
   
   time_elements <- get_time_elements(object,time_range)
-  growth_time <- aaply(which(time_elements), 1, function(x){
+  growth_time <- plyr::aaply(which(time_elements), 1, function(x){
     # Necessary as we only want single time step but may only have 1 species which makes using drop impossible
     
     n <- array(object@n[x,,],dim=dim(object@n)[2:3])
@@ -1009,8 +1025,8 @@ plotGrowth <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
   
   if (species) # if I want to display species instead of ecotypes
   {
-    dimnames(growth)$sp = object@params@species_params$species
-    SpIdx = sort(unique(object@params@species_params$species)) # get the species names
+    dimnames(growth)$sp = object@params@species_params$lineage
+    SpIdx = sort(unique(object@params@species_params$lineage)) # get the species names
     growth_sp = matrix(data = NA, ncol = dim(growth)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(growth)$w)) # prepare the new object
     names(dimnames(growth_sp))=list("species","size")
     
@@ -1107,8 +1123,7 @@ plotScythe <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
   
   # effort can be in 2 forms
   
-  if(is.matrix(object@effort)) effort = object@effort[time_range,]
-  else effort = object@effort[time_range]
+  if(is.matrix(object@effort)) effort = object@effort[time_range,]  else effort = object@effort[time_range]
   
   z <- getZ(object@params, n = object@n[time_range,,], n_pp = object@n_pp[time_range,],#n_aa = object@n_aa[time_range,],n_bb = object@n_bb[time_range,],
             effort = effort)#, 
@@ -1273,3 +1288,5 @@ plotPredRate <- function(object, time_range = max(as.numeric(dimnames(object@n)$
   
   if (returnData) return(plot_dat) else if(print_it) return(p)
 }
+
+
