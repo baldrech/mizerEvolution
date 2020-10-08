@@ -59,7 +59,7 @@ After installing mizerEvolution, you need to load it via `library()`.
 library(mizerEvolution)
 ```
 
-mizerEvolution is compatible with R versions XX and later.
+mizerEvolution is compatible with R versions 2.0.4 and later.
 The source code for mizerEvolution is hosted on [Github.](https://github.com/baldrech/mizerEvolution)
 
 ## Setting the model parameters
@@ -76,10 +76,10 @@ params <- evoParams(no_sp = 5 )
 
 ## Running a simulation 
 
-This is done by calling the `evoProject()` function (as in "project forward in time") with the model parameters. Similar to Mizer's `project()`, `evoProject()` takes the `mutation` parameter which is the number of new species that are going to be introduced during the simulation length. In the future this parameter will also be a rate of new species appearing in the ecosystem.
+This is done by calling the `evoProject()` function (as in "project forward in time") with the model parameters. Similar to Mizer's `project()`, `evoProject()` projects the simulation in time while adding new phenotypes using the `mutation` parameter (rate of apparition of new phenotypes in the simulation). The `trait` parameter determines which species parameter is going to vary during the simulation and differentiate phenotypes between each other within each species. The default is set to `w_mat`, the maturation size.
 
 ```{r, projection}
-sim <- evoProject(params = params, mutation = 1)
+sim <- evoProject(params = params, mutation = 3, trait = "w_mat")
 ```
 
 This produces an object of class `MizerSim` which contains the results of the simulation. 
@@ -132,12 +132,95 @@ base Mizer functions cannot handle species being formed of different "sub-specie
 
 Checking the biomass through time. The default plot has a colorblind of 10 colors and won't work with more than 10 species, if you want to personalise the plot, use `returnData = TRUE`.
 
-```{r Plot dynamics, echo = F}
-# sim <- get(load("~/predationChapter/romainZone/kappa0.1/run1/run.Rdata"))
+### plotDynamics
 
-plotDynamics(sim)
+plotDynamics output the same results as plotBiomass (species' biomass thorugh time) if the phenotype argument is set to FALSE
+```{r, plotDynamics 1}
+plotDynamics(sim, phenotype = F)
 
 ```
+
+Showing the phenotypes as semi-transparent lines, with phenotype = TRUE (default)
+
+```{r plotDynamics 2}
+plotDynamics(sim, phenotype = T)
+
+```
+
+
+The species argument displays all the phenotypes of one species only (take species identity as value)
+
+```{r plotDynamics 3}
+plotDynamics(sim,species = 2)
+
+```
+
+
+The trait value of the phenotypes can be displayed per phenotypes as a continuous gradient, only available when only one species is selected
+
+```{r plotDynamics 4}
+plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
+
+```
+
+The SpIdx argument selects for a subset of species
+
+```{r plotDynamics 5}
+plotDynamics(sim,SpIdx = c(1,2,3))
+
+```
+
+### plotSS
+
+The size spectrum plot can display abundance density or biomass with the biomass argument
+
+```{r sizespectrum1}
+
+plotSS(sim,biomass = F)
+
+plotSS(sim,biomass = T)
+
+```
+
+It can also display 3 levels of grouping: community, species, phenotypes
+
+```{r sizespectrum2}
+
+plotSS(sim, community = T)
+plotSS(sim)
+plotSS(sim, species = F)
+
+
+```
+
+
+### Feeding level
+
+```{r plotFood}
+
+plotevoFeeding(sim)
+
+```
+
+
+### Growth
+
+```{r plotGrowth}
+
+plotevoGrowth(sim)
+
+```
+
+
+## Mortality
+
+```{r plotScythe}
+
+plotevoMortality(sim)
+
+```
+
+
 
 The following plots are not avaialble on this version yet but are examples of what you can get with biomass data and trait evolution through time.
 
@@ -443,96 +526,6 @@ p
 
 ```
 
-
-## Plot functions
-
-### plotDynamics
-
-plotDynamics output the same results as plotBiomass (species' biomass thorugh time) if the phenotype argument is set to FALSE
-```{r, plotDynamics 1}
-plotDynamics(sim, phenotype = F)
-
-```
-
-Showing the phenotypes as semi-transparent lines, with phenotype = TRUE (default)
-
-```{r plotDynamics 2}
-plotDynamics(sim, phenotype = T)
-
-```
-
-
-The species argument displays all the phenotypes of one species only (take species identity as value)
-
-```{r plotDynamics 3}
-plotDynamics(sim,species = 2)
-
-```
-
-
-The trait value of the phenotypes can be displayed per phenotypes as a continuous gradient, only available when only one species is selected
-
-```{r plotDynamics 4}
-plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
-
-```
-
-The SpIdx argument selects for a subset of species
-
-```{r plotDynamics 5}
-plotDynamics(sim,SpIdx = c(1,2,3))
-
-```
-
-### plotSS
-
-The size spectrum plot can display abundance density or biomass with the biomass argument
-
-```{r}
-
-plotSS(sim,biomass = F)
-
-plotSS(sim,biomass = T)
-
-```
-
-It can also display 3 levels of grouping: community, species, phenotypes
-
-```{r}
-
-plotSS(sim, community = T)
-plotSS(sim)
-plotSS(sim, species = F)
-
-
-```
-
-
-### Feeding level
-
-```{r}
-
-plotFood(sim)
-
-```
-
-
-### Growth
-
-```{r}
-
-plotGrowth(sim)
-
-```
-
-
-<!-- ## Mortality -->
-
-<!-- ```{r} -->
-
-<!-- plotScythe(sim) -->
-
-<!-- ``` -->
 
 
 

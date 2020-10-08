@@ -32,7 +32,7 @@ After installing mizerEvolution, you need to load it via `library()`.
 library(mizerEvolution)
 ```
 
-mizerEvolution is compatible with R versions XX and later. The source
+mizerEvolution is compatible with R versions 2.0.4 and later. The source
 code for mizerEvolution is hosted on
 [Github.](https://github.com/baldrech/mizerEvolution)
 
@@ -57,14 +57,16 @@ params <- evoParams(no_sp = 5 )
 
 This is done by calling the `evoProject()` function (as in “project
 forward in time”) with the model parameters. Similar to Mizer’s
-`project()`, `evoProject()` takes the `mutation` parameter which is the
-number of new species that are going to be introduced during the
-simulation length. In the future this parameter will also be a rate of
-new species appearing in the ecosystem.
+`project()`, `evoProject()` projects the simulation in time while adding
+new phenotypes using the `mutation` parameter (rate of apparition of new
+phenotypes in the simulation). The `trait` parameter determines which
+species parameter is going to vary during the simulation and
+differentiate phenotypes between each other within each species. The
+default is set to `w_mat`, the maturation size.
 
 ``` r
-sim <- evoProject(params = params, mutation = 1)
-#> 2 mutants will be added
+sim <- evoProject(params = params, mutation = 3, trait = "w_mat")
+#> 13 mutants will be added
 ```
 
 This produces an object of class `MizerSim` which contains the results
@@ -150,36 +152,6 @@ Checking the biomass through time. The default plot has a colorblind of
 10 colors and won’t work with more than 10 species, if you want to
 personalise the plot, use `returnData = TRUE`.
 
-![](man/figures/Plot%20dynamics-1.png)<!-- -->
-
-The following plots are not avaialble on this version yet but are
-examples of what you can get with biomass data and trait evolution
-through time.
-
-The biomass per trait value of one species through time
-
-![](man/figures/Default%20sim%20phenotypique%20diversity-1.png)<!-- -->
-
-The trait value through time. It’s shown at the species level which is
-the biomass weighted average of the species’ phenotypes
-
-![](man/figures/trait%20through%20time-1.png)<!-- -->
-
-Looking at the fitness of one species (total spawn output throughtout
-lifetime) per trait value
-
-![](man/figures/fitness-1.png)<!-- -->
-
-When two traits are involved
-
-![](man/figures/fitness%202%20traits-1.png)<!-- -->
-
-Checking the average number of phenotypes per species through time.
-
-![](man/figures/number%20of%20phenotypes-1.png)<!-- -->
-
-## Plot functions
-
 ### plotDynamics
 
 plotDynamics output the same results as plotBiomass (species’ biomass
@@ -236,14 +208,14 @@ biomass argument
 plotSS(sim,biomass = F)
 ```
 
-![](man/figures/unnamed-chunk-1-1.png)<!-- -->
+![](man/figures/sizespectrum1-1.png)<!-- -->
 
 ``` r
 
 plotSS(sim,biomass = T)
 ```
 
-![](man/figures/unnamed-chunk-1-2.png)<!-- -->
+![](man/figures/sizespectrum1-2.png)<!-- -->
 
 It can also display 3 levels of grouping: community, species, phenotypes
 
@@ -252,45 +224,72 @@ It can also display 3 levels of grouping: community, species, phenotypes
 plotSS(sim, community = T)
 ```
 
-![](man/figures/unnamed-chunk-2-1.png)<!-- -->
+![](man/figures/sizespectrum2-1.png)<!-- -->
 
 ``` r
 plotSS(sim)
 ```
 
-![](man/figures/unnamed-chunk-2-2.png)<!-- -->
+![](man/figures/sizespectrum2-2.png)<!-- -->
 
 ``` r
 plotSS(sim, species = F)
 ```
 
-![](man/figures/unnamed-chunk-2-3.png)<!-- -->
+![](man/figures/sizespectrum2-3.png)<!-- -->
 
 ### Feeding level
 
 ``` r
 
-plotFood(sim)
+plotevoFeeding(sim)
 ```
 
-![](man/figures/unnamed-chunk-3-1.png)<!-- -->
+![](man/figures/plotFood-1.png)<!-- -->
 
 ### Growth
 
 ``` r
 
-plotGrowth(sim)
+plotevoGrowth(sim)
 ```
 
-![](man/figures/unnamed-chunk-4-1.png)<!-- -->
+![](man/figures/plotGrowth-1.png)<!-- -->
 
-<!-- ## Mortality -->
+## Mortality
 
-<!-- ```{r} -->
+``` r
 
-<!-- plotScythe(sim) -->
+plotevoMortality(sim)
+```
 
-<!-- ``` -->
+![](man/figures/plotScythe-1.png)<!-- -->
+
+The following plots are not avaialble on this version yet but are
+examples of what you can get with biomass data and trait evolution
+through time.
+
+The biomass per trait value of one species through time
+
+![](man/figures/Default%20sim%20phenotypique%20diversity-1.png)<!-- -->
+
+The trait value through time. It’s shown at the species level which is
+the biomass weighted average of the species’ phenotypes
+
+![](man/figures/trait%20through%20time-1.png)<!-- -->
+
+Looking at the fitness of one species (total spawn output throughtout
+lifetime) per trait value
+
+![](man/figures/fitness-1.png)<!-- -->
+
+When two traits are involved
+
+![](man/figures/fitness%202%20traits-1.png)<!-- -->
+
+Checking the average number of phenotypes per species through time.
+
+![](man/figures/number%20of%20phenotypes-1.png)<!-- -->
 
 ## Species invasion
 
