@@ -880,7 +880,7 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
 
 #need to update below
 
-plotFood <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, throughTime = F, start = 1000, every = 1000, 
+plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, throughTime = F, start = 1000, every = 1000, 
                      print_it = T, returnData = F, save_it =F, nameSave = "Feeding.png"){
   
   
@@ -1006,7 +1006,7 @@ plotFood <- function(object, time_range = max(as.numeric(dimnames(object@n)$time
   if (returnData) return(list(plot_dat,Critfeed)) else if(print_it) return(p)
 }
 
-plotGrowth <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, print_it = T, returnData = F, save_it = F, ylim = c(NA,NA),
+plotevoGrowth <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, print_it = T, returnData = F, save_it = F, ylim = c(NA,NA),
                        nameSave = "Growth.png",...){
   
   time_elements <- get_time_elements(object,time_range)
@@ -1041,7 +1041,8 @@ plotGrowth <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
     growth = growth_sp
   }
   
-  name = paste("Growth level at time",time_range,sep=" ")
+  # name = paste("Growth level at time",time_range,sep=" ")
+  name = NULL
   plot_dat <- data.frame(value = c(growth), Species = dimnames(growth)[[1]], w = rep(object@params@w, each=length(dimnames(growth)[[1]])))
   p <- ggplot(plot_dat) + 
     geom_line(aes(x=w, y = value, colour = Species)) + 
@@ -1119,7 +1120,7 @@ plotStarvation <- function(object, time_range = max(as.numeric(dimnames(object@n
   if (returnData) return(plot_dat) else if(print_it) return(p)
 }
 
-plotScythe <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)),print_it = TRUE, returnData = F, comments = T){
+plotevoMortality <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)),print_it = TRUE, returnData = F, comments = T){
   
   # effort can be in 2 forms
   
@@ -1129,38 +1130,34 @@ plotScythe <- function(object, time_range = max(as.numeric(dimnames(object@n)$ti
             effort = effort)#, 
             #intakeScalar = object@intTempScalar[,,time_range], metScalar = object@metTempScalar[,,time_range], morScalar = object@morTempScalar[,,time_range])
   dimnames(z)$prey = object@params@species_params$lineage
-  #SpIdx = sort(unique(object@params@species_params$species)) # get the species names
+  SpIdx = as.numeric(as.character(sort(unique(object@params@species_params$lineage)))) # get the species names
   
   # need to get rid of the extinct species at that time in SpIdx
-  a <- apply(object@n[time_range,,],1,sum)
-  
-  names(a) <- sapply(names(a), function(x) as.numeric(unlist(strsplit(as.character(x), "")))[1])
-  
-  d <- rowsum(a, group = names(a))
-  
-  if (sum(d[,1] == 0)) 
-  {
-    
-    d <- d[-which(d[,1] == 0),]
-    SpIdx <- as.numeric(names(d))
-    
-    
-  } else {SpIdx <- as.numeric(rownames(d))}
+  # a <- apply(object@n[time_range,,],1,sum)
+  # names(a) <- sapply(names(a), function(x) as.numeric(unlist(strsplit(as.character(x), "")))[1])
+  # d <- rowsum(a, group = names(a))
+  # 
+  # if (sum(d[,1] == 0)) 
+  # {
+  #   d <- d[-which(d[,1] == 0),]
+  #   SpIdx <- as.numeric(names(d))
+  # } else {SpIdx <- as.numeric(rownames(d))}
   
   z_sp = matrix(data = NA, ncol = dim(z)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(z)$w_prey)) # prepare the new object
   names(dimnames(z_sp))=list("prey","w_prey")
   
-  for (i in SpIdx)
+  for (iSpecies in SpIdx)
   {
     temp = z # save to manip
-    temp[which(rownames(z) != i), ] = 0 # keep the ecotypes from the species only
+    temp[which(rownames(z) != iSpecies), ] = 0 # keep the ecotypes from the species only
     temp = apply(temp, 2, sum)
-    temp = temp / length(which(rownames(z)==i)) # do the mean (in 2 steps)
-    z_sp[which(rownames(z_sp)==i), ] = temp
+    temp = temp / length(which(rownames(z)==iSpecies)) # do the mean (in 2 steps)
+    z_sp[which(rownames(z_sp)==iSpecies), ] = temp
   }
   z = z_sp
   
-  name = paste("Total Mortality at time",time_range,sep=" ")
+  # name = paste("Total Mortality at time",time_range,sep=" ")
+  name = NULL
   
   plot_dat <- data.frame(value = c(z), Species = dimnames(z)[[1]], w = rep(object@params@w, each=length(dimnames(z)[[1]])))
   
@@ -1290,3 +1287,68 @@ plotPredRate <- function(object, time_range = max(as.numeric(dimnames(object@n)$
 }
 
 
+#' Plot predation mortality rate of each species against size
+#' 
+#' After running a projection, plot the predation mortality rate of each species
+#' by size. The mortality rate is averaged over the specified time range (a
+#' single value for the time range can be used to plot a single time step).
+#' 
+#' @inheritParams plotSpectra
+#'
+#' @return A plot
+#' @export
+#' @family plotting functions
+#' @seealso [plotting_functions],  [getPredMort()]
+#' @examples
+#' \donttest{
+#' params <- suppressMessages(newMultispeciesParams(NS_species_params_gears, inter))
+#' sim <- project(params, effort=1, t_max=20, t_save = 2, progress_bar = FALSE)
+#' plotPredMort(sim)
+#' plotPredMort(sim, time_range = 10:20)
+#' }
+plotPredMort <- function(object, species = NULL,
+                         time_range,
+                         highlight = NULL, ...) {
+  if (is(object, "MizerSim")) {
+    if (missing(time_range)) {
+      time_range  <- max(as.numeric(dimnames(object@n)$time))
+    }
+    params <- object@params
+  } else {
+    params <- validParams(object)
+  }
+  pred_mort <- getPredMort(object, time_range = time_range, drop = FALSE)
+  # If a time range was returned, average over it
+  if (length(dim(pred_mort)) == 3) {
+    pred_mort <- apply(pred_mort, c(2, 3), mean)
+  }
+  
+  # selector for desired species
+  # Set species if missing to list of all non-background species
+  if (is.null(species)) {
+    species <- dimnames(params@initial_n)$sp[!is.na(params@A)]
+  }
+  # Need to keep species in order for legend
+  species_levels <- c(as.character(params@species_params$species), 
+                      "Background", "Resource", "Total")
+  pred_mort <- pred_mort[as.character(dimnames(pred_mort)[[1]]) %in% species, , drop = FALSE]
+  plot_dat <- data.frame(value = c(pred_mort),
+                         Species = factor(dimnames(pred_mort)[[1]],
+                                          levels = species_levels),
+                         w = rep(params@w, each = length(species)))
+  p <- ggplot(plot_dat) +
+    geom_line(aes(x = w, y = value, colour = Species, 
+                  linetype = Species, size = Species))
+  
+  linesize <- rep(0.8, length(params@linetype))
+  names(linesize) <- names(params@linetype)
+  linesize[highlight] <- 1.6
+  p <- p +
+    scale_x_continuous(name = "Size [g]", trans = "log10") +
+    scale_y_continuous(name = "Predation mortality [1/year]",
+                       limits = c(0, max(plot_dat$value))) +
+    scale_colour_manual(values = params@linecolour) +
+    scale_linetype_manual(values = params@linetype) +
+    scale_size_manual(values = linesize)
+  return(p)
+}
