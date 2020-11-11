@@ -11,7 +11,7 @@ output:
 ```{r, initialisation, echo = FALSE, message=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  cache = TRUE,
+  cache = FALSE,
   message = FALSE,
   warning = FALSE,
   comment = "#>",
@@ -41,7 +41,8 @@ Below are described the X steps to use this package wich are described more in d
 
 3. [Running a simulation].
 
-4. [Exploring the results].
+4. [Additional functions]
+5. [Exploring the results].
 
 
 ## Installing mizerEvolution
@@ -64,7 +65,7 @@ The source code for mizerEvolution is hosted on [Github.](https://github.com/bal
 
 ## Setting the model parameters
 
-As with Mizer, you first need to creat an object of `class ? MizerParams`. At the moment, the wrapper function `evoParams()` helps you create this object. It is a tweaked version of `newTraitParams` which add the necessary parameters to support species evolution, therefore all the default parameters from Mizer are found back in this function. `evoParams()` adds the `lineage` parameter which is used to track the ancetry tree of species and the `RDD` parameter which is used to set the recruitment function. It's default is `extinctionRDD()` which allow species to be removed from the ecosystem when they reach an abundance below $10^{-30}ind.m^{-3}$.
+As with Mizer, you first need to creat an object of `class ? MizerParams`. At the moment, the wrapper function `evoParams()` helps you create this object. It is a tweaked version of `newTraitParams` which add the necessary parameters to support species evolution, therefore all the default parameters from Mizer are found back in this function. `evoParams()` adds the `lineage` parameter which is used to track the ancetry tree of species and the `RDD` parameter which is used to set the recruitment function. It's default is `extinctionRDD()` which allow species to be removed from the ecosystem when they reach an abundance below $10^{-30}ind.m^{-3}$. In mizerEvolution, evolution comes from allowing specific parameters to change through time. These parameters are defined in the `trait` argument of `evoProject`. During the simulation, species will be considered as pool of phenotypes, each with a slighty different trait value. These phenotypes are generated semi-randomly, using only a rate of apparition inputed by the user. The phenotypes compete between each others and are pooled together only during the reproduction phase since they are still part of a same species. Generating phenotypes and removing the less abundant proxy natural selection and trait adaptation.
 
 
 
@@ -79,10 +80,15 @@ params <- evoParams(no_sp = 5 )
 This is done by calling the `evoProject()` function (as in "project forward in time") with the model parameters. Similar to Mizer's `project()`, `evoProject()` projects the simulation in time while adding new phenotypes using the `mutation` parameter (rate of apparition of new phenotypes in the simulation). The `trait` parameter determines which species parameter is going to vary during the simulation and differentiate phenotypes between each other within each species. The default is set to `w_mat`, the maturation size.
 
 ```{r, projection}
-sim <- evoProject(params = params, mutation = 3, trait = "w_mat")
+sim <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
 ```
 
 This produces an object of class `MizerSim` which contains the results of the simulation. 
+
+## Additional functions
+
+The parameter `initPool` in `evoProject()` allows to initiate species as pool of phenotypes. Instead of starting with species composed of one phenotypes each, having `initPool = 5` will add 5 randomly generated phenotypes per species at the start of the simulation (for a total of 6 phenotypes per species).
+The parameter `initCondition` allows to input a mizer object instead of a mizer param. This allows to start simulations from previously saved simulations.
 
 
 ## Exploring the results
@@ -159,7 +165,7 @@ plotDynamics(sim,species = 2)
 The trait value of the phenotypes can be displayed per phenotypes as a continuous gradient, only available when only one species is selected
 
 ```{r plotDynamics 4}
-plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
+plotDynamics(sim, species = 2, trait = sim@params@species_params$beta)
 
 ```
 
@@ -220,6 +226,13 @@ plotevoMortality(sim)
 
 ```
 
+## Trait evolution
+
+```{r plotevoTrait}
+
+plotevoTrait(sim, traitID = "beta", returnData = F)
+
+```
 
 
 The following plots are not avaialble on this version yet but are examples of what you can get with biomass data and trait evolution through time.
@@ -427,8 +440,8 @@ When two traits are involved
 
 ```{r fitness 2 traits, echo = F}
 
-KKNNIn <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/initAdd/KKNN.rds")
-KKNNGW <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/GW/backup/KKNN.rds")
+KKNNIn <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/initAdd/KKNN.rds")
+KKNNGW <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/GW/backup/KKNN.rds")
 # KKNNGW <- readRDS("romainZone/sensitivity/mu/GW/10/KKNN.rds")
 
 #update time

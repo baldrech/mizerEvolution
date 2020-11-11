@@ -14,7 +14,9 @@ more in details further down.
 
 3.  [Running a simulation](#running-a-simulation).
 
-4.  [Exploring the results](#exploring-the-results).
+4.  [Additional functions](#additional-functions)
+
+5.  [Exploring the results](#exploring-the-results).
 
 ## Installing mizerEvolution
 
@@ -47,7 +49,16 @@ function. `evoParams()` adds the `lineage` parameter which is used to
 track the ancetry tree of species and the `RDD` parameter which is used
 to set the recruitment function. It’s default is `extinctionRDD()` which
 allow species to be removed from the ecosystem when they reach an
-abundance below \(10^{-30}ind.m^{-3}\).
+abundance below \(10^{-30}ind.m^{-3}\). In mizerEvolution, evolution
+comes from allowing specific parameters to change through time. These
+parameters are defined in the `trait` argument of `evoProject`. During
+the simulation, species will be considered as pool of phenotypes, each
+with a slighty different trait value. These phenotypes are generated
+semi-randomly, using only a rate of apparition inputed by the user. The
+phenotypes compete between each others and are pooled together only
+during the reproduction phase since they are still part of a same
+species. Generating phenotypes and removing the less abundant proxy
+natural selection and trait adaptation.
 
 ``` r
 params <- evoParams(no_sp = 5 )
@@ -62,15 +73,26 @@ new phenotypes using the `mutation` parameter (rate of apparition of new
 phenotypes in the simulation). The `trait` parameter determines which
 species parameter is going to vary during the simulation and
 differentiate phenotypes between each other within each species. The
-default is set to `w_mat`, the maturation size.
+default is set to `w_mat`, the maturation
+size.
 
 ``` r
-sim <- evoProject(params = params, mutation = 3, trait = "w_mat")
-#> 13 mutants will be added
+sim <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
+#> 28 mutants will be added
 ```
 
 This produces an object of class `MizerSim` which contains the results
 of the simulation.
+
+## Additional functions
+
+The parameter `initPool` in `evoProject()` allows to initiate species as
+pool of phenotypes. Instead of starting with species composed of one
+phenotypes each, having `initPool = 5` will add 5 randomly generated
+phenotypes per species at the start of the simulation (for a total of 6
+phenotypes per species). The parameter `initCondition` allows to input a
+mizer object instead of a mizer param. This allows to start simulations
+from previously saved simulations.
 
 ## Exploring the results
 
@@ -185,7 +207,7 @@ The trait value of the phenotypes can be displayed per phenotypes as a
 continuous gradient, only available when only one species is selected
 
 ``` r
-plotDynamics(sim, species = 2, trait = sim@params@species_params$w_mat)
+plotDynamics(sim, species = 2, trait = sim@params@species_params$beta)
 ```
 
 ![](man/figures/plotDynamics%204-1.png)<!-- -->
@@ -264,6 +286,18 @@ plotevoMortality(sim)
 ```
 
 ![](man/figures/plotScythe-1.png)<!-- -->
+
+## Trait evolution
+
+``` r
+
+plotevoTrait(sim, traitID = "beta", returnData = F)
+```
+
+![](man/figures/plotevoTrait-1.png)<!-- -->
+
+    #> [[1]]
+    #> list()
 
 The following plots are not avaialble on this version yet but are
 examples of what you can get with biomass data and trait evolution
