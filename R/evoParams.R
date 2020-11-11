@@ -140,8 +140,10 @@ evoParams <- function(no_sp = 11,
     resource_scaling = resource_scaling,
     perfect_scaling = perfect_scaling)
 
-  params@species_params$zeta <- zeta
-  params@species_params$lineage <- as.factor(1:no_sp)
+  params@species_params$zeta <- zeta # amplitude of lognorm distribution around trait when generating new phenotype
+  params@species_params$lineage <- as.factor(1:no_sp) # parameter to remember the origin species of the phenotypes
+  params@species_params$pop <- 1 # when does the phenotype entered the simulation
+  params@species_params$ext <- F # when does the phenotype left the simulation
   params <- setReproduction(params, RDD = RDD)
 
   return(params)
@@ -184,7 +186,7 @@ finalTouch <- function(saveFolder,params,t_max)
   }
 
   # reconstruct the mizer object; the last tempRun loaded contains the right @params
-
+biomass[is.na(biomass)] <- 0 # don;t want any NA from mid-sim popping phenotypes
   tempRun@n <- biomass
   tempRun@effort <- effort
   tempRun@n_pp <- biomassPP
@@ -200,6 +202,21 @@ finalTouch <- function(saveFolder,params,t_max)
                                  component = component_names)
   tempRun@n_other <- list_n_other
   
+  # update the params for any extinct species
+  for(iSpecies in tempRun@params@species_params$species)
+  {
+    itime <- dim(tempRun@n)[1]
+    while(sum(tempRun@n[itime,iSpecies,])<=1e-30)
+    {
+      # print("species")
+      # print(iSpecies)
+      # print(itime)
+      itime = itime - 1
+      tempRun@params@species_params$ext[as.numeric(iSpecies)] <- itime
+      # print("extinction")
+      # print(tempRun@params@species_params$ext)
+    }
+  }
   
   
   return(tempRun)
@@ -222,20 +239,175 @@ finalTouch <- function(saveFolder,params,t_max)
 #'                   saveFolder = saveFolder)
 #' plot(sim)
 #' }
-evoProject <- function(params,t_max = 100, dt = 0.1, 
-                       mutation = 2, trait = "w_mat",
+evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1, # params and initCondition cannot be both null at same time, need to specify that 
+                       mutation = 2, trait = "w_mat", initPool = 0, initSpread = 5,
                        saveFolder = file.path(tempdir(), "simTemp"), effort = 0)
 {
+  
+  if(is.null(initCondition))
+  {
+  
+  if (initPool > 0) # To create phenotypic diversity at the start per species
+  {
+    for (iSpecies in sort(unique(params@species_params$lineage)))
+    {
+      # Generate phenotypes pool
+      for (iPhenotype in seq(1, initPool))
+      {
+        newSp <- params@species_params[params@species_params$species == iSpecies,] # perfect copy
+        newSp$species <-factor(as.character(max(as.numeric(params@species_params$species))+1), levels = max(as.numeric(params@species_params$species))+1) # new species name but lineage stays the same
+        
+        switch(trait,
+               size = {
+                 # Trait = asymptotic size
+                 sd = as.numeric(mAmplitude * initSpread *  params@species_params[which(params@species_params$ecotype == iSpecies),]$w_inf)
+                 newSp$w_inf <- abs(newSp$w_inf + rnorm(1, 0, sd)) # change a bit the asymptotic size
+                 newSp$w_mat <- newSp$w_inf * eta # calculate from the new w_inf value
+                 newSp$z0 <- z0pre * as.numeric(newSp$w_inf) ^ (n - 1) # if I don't put as.numeric I lose the name z0
+               },
+               Beta = {
+                 # Trait = PPMR
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$beta)
+                 newSp$beta <- abs(newSp$beta + rnorm(1, 0, sd)) # change a bit the PPMR
+                 while(newSp$beta < 10) newSp$beta <-  abs(newSp$beta + rnorm(1, 0, sd))
+                 alpha_e <- sqrt(2 * pi) * newSp$sigma * newSp$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * newSp$sigma ^ 2 / 2) *   
+                   (pnorm(3 - (lambda - 2) * newSp$sigma) + pnorm(log(newSp$beta)/newSp$sigma + (lambda - 2) * newSp$sigma) - 1)
+                 # newSp$gamma <- h * f0 / (alpha_e * kappa * (1 - f0))
+               },
+               sigma = {
+                 # Trait = fedding kernel
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$sigma)
+                 newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, sd)) # change a bit the diet breadth
+                 while(newSp$sigma < .5 | newSp$sigma > 5)  newSp$sigma <-  abs(newSp$sigma + rnorm(1, 0, sd))
+                 alpha_e <- sqrt(2 * pi) * newSp$sigma * newSp$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * newSp$sigma ^ 2 / 2)*   
+                   (pnorm(3 - (lambda - 2) * newSp$sigma) + pnorm(log(newSp$beta)/newSp$sigma + (lambda - 2) * newSp$sigma) - 1)
+                 newSp$gamma <- h * f0 / (alpha_e * kappa * (1 - f0))
+               },
+               predation = {
+                 # PPMR
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$beta)
+                 newSp$beta <- abs(newSp$beta + rnorm(1, 0, sd)) # change a bit the PPMR
+                 while(newSp$beta < 10) newSp$beta <-  abs(newSp$beta + rnorm(1, 0, sd))
+                 # feeding kernel
+                 sd = as.numeric(mAmplitude *  params@species_params[which(params@species_params$ecotype == iSpecies),]$sigma)
+                 newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, sd)) # change a bit the diet breadth
+                 while(newSp$sigma < .5 | newSp$sigma >5 )  newSp$sigma <-  abs(newSp$sigma + rnorm(1, 0, sd))
+                 # recalculate gamma if necessary
+                 alpha_e <- sqrt(2 * pi) * newSp$sigma * newSp$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * newSp$sigma ^ 2 / 2)*
+                   (pnorm(3 - (lambda - 2) * newSp$sigma) + pnorm(log(newSp$beta)/newSp$sigma + (lambda - 2) * newSp$sigma) - 1)
+                 newSp$gamma <- h * f0 / (alpha_e * kappa * (1 - f0))
+               },
+               eta = {
+                 # Trait = eta
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$eta)
+                 newSp$eta <- abs(newSp$eta + rnorm(1, 0, sd)) # change a bit eta
+                 newSp$w_mat <- newSp$w_inf * newSp$eta # update
+               },
+               ed_int = {
+                 # Trait = ed_int
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$ed_int)
+                 newSp$ed_int <- abs(newSp$ed_int + rnorm(1, 0, sd))
+                 while(newSp$ed_int < 2.5) newSp$ed_int <- abs(newSp$ed_int + rnorm(1, 0, sd))
+               },
+               t_d = {
+                 # Trait = ed_int
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$t_d)
+                 newSp$t_d <- abs(newSp$t_d + rnorm(1, 0, sd))
+               },
+               temperature = {
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$ed_int)
+                 newSp$ed_int <-abs( newSp$ed_int + rnorm(1, 0, sd))
+                 while(newSp$ed_int < 2.5) newSp$ed_int <- abs(newSp$ed_int + rnorm(1, 0, sd)) # ed_int cannot go lower than 2.5
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$t_d)
+                 newSp$t_d <- abs(newSp$t_d + rnorm(1, 0, sd))
+               },
+               
+               all = {
+                 # Trait = asymptotic size
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$w_inf)
+                 newSp$w_inf <- abs(newSp$w_inf + rnorm(1, 0, sd)) # change a bit the asymptotic size
+                 newSp$w_mat <- abs(newSp$w_inf * eta) # calculate from the new w_inf value
+                 newSp$z0 <- z0pre * as.numeric(newSp$w_inf) ^ (n - 1) # if I don't put as.numeric I lose the name z0
+                 # Trait = predation
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$beta)
+                 newSp$beta <- abs(newSp$beta + rnorm(1, 0, sd)) # change a bit the PPMR
+                 sd = as.numeric(mAmplitude * initSpread * params@species_params[which(params@species_params$ecotype == iSpecies),]$sigma)
+                 newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, sd)) # change a bit the diet breadth
+                 # calculate the new gamma
+                 alpha_e <- sqrt(2 * pi) * newSp$sigma * newSp$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * newSp$sigma ^ 2 / 2)*   
+                   (pnorm(3 - (lambda - 2) * newSp$sigma) + pnorm(log(newSp$beta)/newSp$sigma + (lambda - 2) * newSp$sigma) - 1)
+                 
+                 newSp$gamma <- h * f0 / (alpha_e * kappa * (1 - f0))
+               },
+               {
+                 
+                 sd = newSp$zeta * initSpread * as.numeric(newSp[trait])
+                 newSp[trait] <- abs(newSp[trait] + rnorm(1, 0, sd))
+                 
+               })
+        
+        
+        # update initial abundance matrix
+        n_init <- params@initial_n
+        n_newSp <- array(0,dim = c(1,dim(n_init)[2]), dimnames = list("sp" = newSp$species, "w" = dimnames(n_init)$w))
+        n_init <- rbind(n_init,n_newSp) # this include the new mutant as last column
+        names(dimnames(n_init)) <- c("sp","W") # getting the dimnames back
+        
+        params <- addSpecies(params = params, species_params = newSp, init_n= n_init)
+        
+        
+        
+        
+        
+        
+        
+      }
+    }
+    
+    # redistribute the abundance of the phenotypes more randomly
+    original_n <- params@initial_n[unique(params@species_params$lineage),] # getting the abundance of the original species, all the others are set to 0
+    init_n <- params@initial_n # the one to fill with new values
+    for (iSpecies in unique(params@species_params$lineage)) # for every species
+    {
+      #the total abundance is randomly distributed among all the phenotypes
+      biomRandom<- runif(initPool+1,0,1)
+      biomFrac <- biomRandom/sum(biomRandom) # that's the fraction to apply to the initial abundance to spread the biomass among phenotypes
+      position = 0
+      for(iPhen in which(params@species_params$lineage == iSpecies)) # which phen are within ispecies 
+      {
+        position = position + 1
+        init_n[iPhen,] <- original_n[iSpecies,] * biomFrac[position]
+      }
+    }
+    
+    
+    params@initial_n <- init_n
+    
+  }
+  }
+  else 
+  {
+    # not using the built in stuff in the project function for now
+
+    params <- initCondition@params
+    params@initial_n <- initCondition@n[dim(initCondition@n)[1],,]
+    params@initial_n_pp <- initCondition@n_pp[dim(initCondition@n_pp)[1],]
+   
+  }
+  
+
+  
   # Initialisation
-  SpIdx <- unique(params@species_params$species)
+  SpIdx <- unique(params@species_params$lineage)
   # check if saveFolder is ok
   if(!dir.exists(saveFolder)) dir.create(saveFolder)
   
   if(is.numeric(mutation))
   {
 # users gives a mutation rate per species per year in %, it is converted into a matrix giving which species gets mutant at which time_step
-  mutationPerSteps <- mutation#*dt
-  t_mutation <- matrix(0,nrow = length(SpIdx), ncol = (t_max/1), dimnames = list("species" = SpIdx, "time" = 1:(t_max/1)))  
+  # if(initPool) mutationPerSteps <- mutation/initPool else mutationPerSteps <- mutation # every phen can mutate but need to adjust mutation rate or it will increase with hte number of initial phen | not gonna work if it makes mutation per step close to 0 or 1 which it is
+    mutationPerSteps <- mutation
+    t_mutation <- matrix(0,nrow = length(SpIdx), ncol = (t_max/1), dimnames = list("species" = SpIdx, "time" = 1:(t_max/1)))  
   for(iSpecies in SpIdx) # for each species
   {
     for(iTime in 1:(t_max/1)) # for each time step
@@ -246,6 +418,8 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
   }
   t_event <- apply(t_mutation,2,sum) # t_mutation knows which species mutates and t_event knows which time
   t_event <- which(t_event >=1)
+  # print(t_mutation)
+  # print(t_event)
 # t_event <- floor(t_event*dt) # need to go back to this dimension as project(that I cannot change) is going to divide by dt
 # but I start to get issues
 # if(t_event[1] == 0) t_event[1] = 1
@@ -288,55 +462,88 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
     {
     ## new mutant param
     # randomly take a resident
-    resident <- as.character(which(t_mutation[,t_event[iSim-1]]>0)[1]) # not handling 2 new mutatns at the same time for now
+      # print("t_mutation")
+      # print(t_mutation)
+      # print("t_event")
+      # print(t_event)
+      # print("isim")
+      # print(iSim)
+      # print("t_max_vec")
+      # print(t_max_vec)
+      # print("resident")
+      # print(which(t_mutation[,t_event[iSim-1]]>0))
+   resident_lineage <- as.character(which(t_mutation[,t_event[iSim-1]]>0)[1]) # not handling 2 new mutatns at the same time for now
+   resident <- as.character(sample(mySim@params@species_params$species[which(mySim@params@species_params$lineage == resident_lineage)],1)) 
+    # print(mySim@n[,resident,1:2])
+    phenCount <- 0
+    while(sum(mySim@n[t_max_vec[iSim-1],resident,]) < 2e-28) # if resident is too low abundance, cannot produce a new phenotype that would be under the extinction threshol (need to put it as variables)
+      {
+      resident <- as.character(sample(mySim@params@species_params$species[which(mySim@params@species_params$lineage == resident_lineage)],1))
+      phenCount <- phenCount +1
+      if(phenCount> length(which(mySim@params@species_params$lineage == resident_lineage))*2) # if selecting twice the number of phen randomly in the species did not yield a whorthy parent, take anohter sp
+      {
+        lineageList <- unique(mySim@params@species_params$lineage)
+        lineageList <- lineageList[-as.numeric(resident_lineage)] # remove the extinct species from the list
+        resident_lineage <- sample(lineageList,1)
+        phenCount <- 0 # reset count
+      }
+    }
+    
+    # The more stuff go extinct, the slower it will get and the more chance it might fail.
+    # TODO update extinction time whenever possible so can select subset of live phenotypes directly
+    
     #print(resident)
     # resident <- as.character(sample(mySim@params@species_params$species, 1))
 
     # create a new species param
 
     newSp <- mySim@params@species_params[resident,] # get a copy of the resident
+    newSp$pop <- t_event[iSim-1]
+    # print(newSp)
 # switch to determine what happens to the new species
     #TODO  need to rewrite the specific cases properly
     switch(trait, # cases with specific names and default if users gives just a parameter df name as trait
            size = {
              # Trait = asymptotic size
-             sd = as.numeric(mAmplitude *  resident_params["w_inf"]) # standard deviation
-             mutant["w_inf"] <- resident_params["w_inf"] + rnorm(1, 0, sd) # change a bit the asymptotic size
-             mutant["w_mat"] <- mutant["w_inf"] * eta # calculate from the new w_inf value
-             mutant["z0"] <- z0pre * as.numeric(mutant["w_inf"]) ^ (n - 1) # if I don't put as.numeric I lose the name z0
-             #cat(sprintf("Its size mutes slightly.\n"))
-           },
-           Beta = {
-             # Trait = PPMR
-             sd = as.numeric(mAmplitude *  resident_params["beta"]) # standard deviation
-             mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd) # change a bit the PPMR
-             while(mutant$beta < 10) 
-             {print("need to reroll beta")
-               mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd)
-             }
-             # calculate the new gamma
-             alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
-               (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
              
-             # mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
-             
-             cat(sprintf("parent beta:%f, gamma:%f\n",resident_params$beta,resident_params$gamma))
-             cat(sprintf("mutant beta:%f, gamma:%f\n",mutant$beta,mutant$gamma))
-             # cat(sprintf("Its PPMR is:%f\n",mutant$beta))
+             sd = as.numeric(mySim@params@species_params$zeta[as.numeric(resident)] * mySim@params@species_params$w_inf[as.numeric(resident),1])
+             newSp$w_inf <- newSp$w_inf + rnorm(1, 0, sd)
+             # need to get eta and Z0pre from somewhere before this works
+             # newSp$w_mat <- newSp$w_inf * newSp$eta
+             # newSp$z0 <- z0pre * as.numeric(newSp$w_inf) ^ (n - 1)
+      
            },
-           Sigma = {
-             # Trait = fedding kernel
-             sd = as.numeric(mAmplitude *  resident_params["sigma"]) # standard deviation
-             mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd) # change a bit the diet breadth
-             while(mutant$sigma < .5 | mutant$sigma > 5) 
-             {print("need to reroll sigma")
-               mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd)}
-             # calculate the new gamma
-             alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
-               (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
-             mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
-             #cat(sprintf("Its diet breadth mutes slightly.\n"))
-           },
+           # Beta = {
+           #   # Trait = PPMR
+           #   sd = as.numeric(mAmplitude *  resident_params["beta"]) # standard deviation
+           #   mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd) # change a bit the PPMR
+           #   while(mutant$beta < 10) 
+           #   {print("need to reroll beta")
+           #     mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd)
+           #   }
+           #   # calculate the new gamma
+           #   alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
+           #     (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
+           #   
+           #   # mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
+           #   
+           #   cat(sprintf("parent beta:%f, gamma:%f\n",resident_params$beta,resident_params$gamma))
+           #   cat(sprintf("mutant beta:%f, gamma:%f\n",mutant$beta,mutant$gamma))
+           #   # cat(sprintf("Its PPMR is:%f\n",mutant$beta))
+           # },
+           # Sigma = {
+           #   # Trait = fedding kernel
+           #   sd = as.numeric(mAmplitude *  resident_params["sigma"]) # standard deviation
+           #   mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd) # change a bit the diet breadth
+           #   while(mutant$sigma < .5 | mutant$sigma > 5) 
+           #   {print("need to reroll sigma")
+           #     mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd)}
+           #   # calculate the new gamma
+           #   alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
+           #     (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
+           #   mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
+           #   #cat(sprintf("Its diet breadth mutes slightly.\n"))
+           # },
            predation = {
              # PPMR
              sd = as.numeric(mAmplitude *  resident_params["beta"]) # standard deviation
@@ -357,50 +564,50 @@ evoProject <- function(params,t_max = 100, dt = 0.1,
              cat(sprintf("parent beta:%f, sigma:%f, gamma:%f\n",resident_params$beta,resident_params$sigma,resident_params$gamma))
              cat(sprintf("mutant beta:%f, sigma:%f, gamma:%f\n",mutant$beta,mutant$sigma,mutant$gamma))
            },
-           eta = {
-             # Trait = eta
-             sd = as.numeric(mAmplitude *  resident_params["eta"]) # standard deviation
-             mutant["eta"] <- resident_params["eta"] + rnorm(1, 0, sd) # change a bit eta
-             if (mutant["eta"] >= 1) mutant["eta"] <- 0.95 # because yes it does happen
-             mutant["w_mat"] <- mutant["w_inf"] * mutant["eta"] # update
-             #cat(sprintf("Its w_mat is: %g\n",mutant["w_mat"]))
-           },
-           ed_int = {
-             # Trait = ed_int
-             sd = as.numeric(mAmplitude *  resident_params["ed_int"])
-             mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd)
-             while(mutant$ed_int < 2.5) mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd) # ed_int cannot go lower than 2.5
-           },
-           t_d = {
-             # Trait = ed_int
-             sd = as.numeric(mAmplitude *  resident_params["t_d"])
-             mutant$t_d <- mutant$t_d + rnorm(1, 0, sd)
-             cat(sprintf("Its name is %i and its trait value is %g\n", mutant$ecotype,mutant["t_d"]))
-           },
-           temperature = {
-             sd = as.numeric(mAmplitude * resident_params["ed_int"])
-             mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd)
-             while(mutant$ed_int < 2.5) mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd) # ed_int cannot go lower than 2.5
-             sd = as.numeric(mAmplitude * resident_params["t_d"])
-             mutant$t_d <- mutant$t_d + rnorm(1, 0, sd)
-           },
-           all = {
-             # Trait = asymptotic size
-             sd = as.numeric(mAmplitude *  resident_params["w_inf"]) # standard deviation
-             mutant["w_inf"] <- resident_params["w_inf"] + rnorm(1, 0, sd) # change a bit the asymptotic size
-             mutant["w_mat"] <- mutant["w_inf"] * eta # calculate from the new w_inf value
-             mutant["z0"] <- z0pre * as.numeric(mutant["w_inf"]) ^ (n - 1) # if I don't put as.numeric I lose the name z0
-             # Trait = predation
-             sd = as.numeric(mAmplitude *  resident_params["beta"]) # standard deviation
-             mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd) # change a bit the PPMR
-             sd = as.numeric(mAmplitude *  resident_params["sigma"]) # standard deviation
-             mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd) # change a bit the diet breadth
-             # calculate the new gamma
-             alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
-               (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
-             mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
-             #cat(sprintf("Its traits mute slightly.\n"))
-           },
+           # eta = {
+           #   # Trait = eta
+           #   sd = as.numeric(mAmplitude *  resident_params["eta"]) # standard deviation
+           #   mutant["eta"] <- resident_params["eta"] + rnorm(1, 0, sd) # change a bit eta
+           #   if (mutant["eta"] >= 1) mutant["eta"] <- 0.95 # because yes it does happen
+           #   mutant["w_mat"] <- mutant["w_inf"] * mutant["eta"] # update
+           #   #cat(sprintf("Its w_mat is: %g\n",mutant["w_mat"]))
+           # },
+           # ed_int = {
+           #   # Trait = ed_int
+           #   sd = as.numeric(mAmplitude *  resident_params["ed_int"])
+           #   mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd)
+           #   while(mutant$ed_int < 2.5) mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd) # ed_int cannot go lower than 2.5
+           # },
+           # t_d = {
+           #   # Trait = ed_int
+           #   sd = as.numeric(mAmplitude *  resident_params["t_d"])
+           #   mutant$t_d <- mutant$t_d + rnorm(1, 0, sd)
+           #   cat(sprintf("Its name is %i and its trait value is %g\n", mutant$ecotype,mutant["t_d"]))
+           # },
+           # temperature = {
+           #   sd = as.numeric(mAmplitude * resident_params["ed_int"])
+           #   mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd)
+           #   while(mutant$ed_int < 2.5) mutant$ed_int <- mutant$ed_int + rnorm(1, 0, sd) # ed_int cannot go lower than 2.5
+           #   sd = as.numeric(mAmplitude * resident_params["t_d"])
+           #   mutant$t_d <- mutant$t_d + rnorm(1, 0, sd)
+           # },
+           # all = {
+           #   # Trait = asymptotic size
+           #   sd = as.numeric(mAmplitude *  resident_params["w_inf"]) # standard deviation
+           #   mutant["w_inf"] <- resident_params["w_inf"] + rnorm(1, 0, sd) # change a bit the asymptotic size
+           #   mutant["w_mat"] <- mutant["w_inf"] * eta # calculate from the new w_inf value
+           #   mutant["z0"] <- z0pre * as.numeric(mutant["w_inf"]) ^ (n - 1) # if I don't put as.numeric I lose the name z0
+           #   # Trait = predation
+           #   sd = as.numeric(mAmplitude *  resident_params["beta"]) # standard deviation
+           #   mutant["beta"] <- resident_params["beta"] + rnorm(1, 0, sd) # change a bit the PPMR
+           #   sd = as.numeric(mAmplitude *  resident_params["sigma"]) # standard deviation
+           #   mutant["sigma"] <- resident_params["sigma"] + rnorm(1, 0, sd) # change a bit the diet breadth
+           #   # calculate the new gamma
+           #   alpha_e <- sqrt(2 * pi) * mutant$sigma * mutant$beta ^ (lambda - 2) * exp((lambda - 2) ^ 2 * mutant$sigma ^ 2 / 2)*   
+           #     (pnorm(3 - (lambda - 2) * mutant$sigma) + pnorm(log(mutant$beta)/mutant$sigma + (lambda - 2) * mutant$sigma) - 1)
+           #   mutant["gamma"] <- h * f0 / (alpha_e * kappa * (1 - f0))
+           #   #cat(sprintf("Its traits mute slightly.\n"))
+           # },
            {
              sd = as.numeric(mySim@params@species_params$zeta[as.numeric(resident)] * mySim@params@species_params[trait][as.numeric(resident),1])
              newSp[trait] <- abs(newSp[trait] + rnorm(1, 0, sd))
@@ -1351,4 +1558,199 @@ plotPredMort <- function(object, species = NULL,
     scale_linetype_manual(values = params@linetype) +
     scale_size_manual(values = linesize)
   return(p)
+}
+
+plotevoTrait <- function(object, SpIdx = NULL, Normalisation = F, returnData = T, traitID = NULL)
+{
+  cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
+  
+  if(is.null(SpIdx)) SpIdx <- unique(object@params@species_params$lineage)
+  TimeMax <- dim(object@n)[1]
+  if(is.null(traitID)) traitID <- "w_mat"
+  
+  Wmat <- object@params@species_params$w_mat[SpIdx] # maturation size to only select mature phenotypes
+  
+  # if (save_it & is.null(dir))  # if want to save but not specified where
+  #   dir = paste(getwd(),"/temporary",sep = "")
+  # 
+  # ifelse(!dir.exists(file.path(dir)), dir.create(file.path(dir)), FALSE) #create the file if it does not exists
+  
+  
+  # Set-up the data right, we need the right apparition, extinction, traits, ... it is done dynamically mouahahah
+  SumPar = object@params@species_params #shortcut
+  # TT = cbind(SumPar$species,as.numeric(SumPar$ecotype),dt*SumPar$pop,dt*SumPar$extinct,SumPar[traitID]) # weird things happen without the as.numeric / *0.1 because dt / need to update this to have the traits as arguments
+  TT = data.frame("Species" = SumPar$lineage, "Phenotype" =  as.numeric(SumPar$species),"Apparition" = SumPar$pop,
+                  "Extinction" = SumPar$ext,SumPar[traitID]) # weird things happen without the as.numeric / *0.1 because dt / need to update this to have the traits as arguments
+  
+  # colnames(TT) = c("Species","Phenotype","Apparition","Extinction","Td","EdInt")
+  # rownames(TT) = rownames(SumPar)
+  # TT = TT[order(TT[,1],decreasing=FALSE),]
+  # TT = as.data.frame(TT) # I use TT later in the graphs (its like an artefact)
+  
+  for (i in 1:dim(TT)[1]) if (TT$Extinction[i] == 0) TT$Extinction[i] = TimeMax # Fill the extinction value for the non-extinct species
+  
+  # Weighted mean of trait value
+  # 1) matrix of summed abundance of mature individuals at each time step
+  biomass = object@n
+  # put 0 in object@n when w < w_mat
+  for (iTime in 1:dim(biomass)[1]) # for each time step
+  {
+    for (iPhen in 1:dim(biomass)[2]) # for each ecotypes
+    {
+      w_lim = SumPar$w_mat[iPhen] # get the maturation size of the ecotype
+      S <- numeric(length(object@params@w))
+      S[sapply(w_lim, function(x) which.min(abs(x - object@params@w)))] <- 1 # find what w bin is the closest of the maturation size
+      NoW_mat = which(S == 1) # what is the col number of that size bin
+      biomass[iTime,iPhen,1:NoW_mat-1] <-0 # everything under this value become 0
+    }
+  }
+  
+  abundanceM = apply(biomass, c(1,2),sum) # sum the abundance left 
+  
+  # 2) normalisation per species 
+  colnames(abundanceM) = TT$Species # phenotypes from same species have the same name
+  abundanceM[is.na(abundanceM)] <- 0 # don't want any NA
+  abundanceNormal = matrix(0,nrow = dim(abundanceM)[1], ncol = dim(abundanceM)[2])
+  
+  # I am getting rid of the species which went instinct at the begining and that went extinct without having mutants (no trait variation)
+  # SpIdx = NULL
+  # for (i in unique(SumPar$species))
+  #   if (sum(abundanceM[,i]) != 0 & dim(SumPar[SumPar$species == i,])[1] != 1) # if not extinct at the beginning and more than one ecotype (for the apply)
+  #     SpIdx = c(SpIdx,i)
+  
+  # SpIdx is annoying:
+  # if (length(SpIdx) > length(unique(SumPar$species))) SpIdx = unique(SumPar$species) # ok so I might have species not even reaching this point so I'm short cutting spidx automatcaly
+  
+  for (iSpecies in SpIdx)
+  {
+    abundanceSp = abundanceM # save to manipulate
+    abundanceSp[,which(colnames(abundanceM) != iSpecies)] = 0 # make everything but the targeted species to go 0 to have correct normalisation
+    abundanceSp = sweep(abundanceSp,1,apply(abundanceSp,1,sum),"/") # normalise
+    abundanceSp[is.nan(abundanceSp)] <-0 # when I divide by 0 I get nan
+    abundanceNormal = abundanceNormal + abundanceSp # I just need to add them up to get the final matrix
+  }
+  # if (comments) cat(sprintf("Abundance normalised\n"))
+  
+  # Now I have normalised abundance, I need to apply the trait I want to plot on them
+  
+  
+  plotList <- vector(mode = "list", length = length(traitID))
+  dataList <- vector(mode = "list", length = length(traitID))
+  
+  # Trait
+  
+  for(iTrait in traitID)
+  {
+    plotStore <- list()
+    dataStore <- NULL
+    abundanceT = sweep(abundanceNormal,2,as.matrix(SumPar[iTrait]),"*") # I use the normalised abundance and multiply by the trait value
+    
+    # Calculate mean at each time step
+    TotMean = matrix(0, nrow = dim(abundanceT)[1], ncol = max(as.numeric((unique(TT$Species)))), 
+                     dimnames = list(rownames(abundanceT),as.character(seq(1,max(as.numeric(unique(TT$Species))))))) #sort(unique(SumPar$species))[length(unique(SumPar$species))]
+    names(dimnames(TotMean)) = list("time","species")
+    
+    for (i in SpIdx)
+    {
+      AMean = abundanceT[,which(colnames(abundanceT) == i)] # get the portion of the matrix I want (right species)
+      if (is.null(dim(AMean)) ==F) AMean = apply(AMean,1,sum) # it is already weighted so I'm just summing to get the mean # if only one sp no need to do it
+      TotMean[,i] = AMean
+    }
+    
+    # Calculate variance and standard deviation
+    # it is the sum of the difference between value and mean squared and multiplied by the weight
+    
+    statData = list() # list with the stats of all species as I need to do this for each species separatly
+    
+    for (i in SpIdx)
+    {
+      meanSp = TotMean[,i] # take the mean of the species
+      traitSp = filter(TT, Species == i)[iTrait] # take the traits of the ecotypes in the species
+      weightSp = abundanceNormal[,which(colnames(abundanceNormal) == i)] # take the proportion of each ecotypes
+      statMat = matrix(cbind(as.numeric(rownames(abundanceT)),meanSp,0,0,0), ncol = 5,nrow = length(meanSp), dimnames = list(NULL,c("time","mean","sd","percentMean","percentSd"))) # initialise the matrix
+      for (itime in 1:length(meanSp)) # for each time step
+      {
+        if (is.null(dim(weightSp))) {variance = sum(((traitSp-meanSp[itime])^2)*weightSp[itime])} else {variance = sum(((traitSp-meanSp[itime])^2)*weightSp[itime,])} # calculate the variance, condition if only one phen
+        statMat[itime,3] <- variance
+        statMat[itime,4] <- (meanSp[itime] - traitSp[1,])/traitSp[1,] # normalisation of mean
+        statMat[itime,5] <- statMat[itime,3]/traitSp[1,] # normalised sd
+      }
+      statData[[i]] = as.data.frame(statMat) # put in the list
+    }
+    
+    # I have the stats for every species, just need to plot now
+    
+    
+    for (i in SpIdx)
+    {
+      stat = statData[[i]] # take the stats of the right species
+      
+      # phenotype = TT[TT$Species == i,c("Apparition","Extinction",iTrait)] # recup the traits time values
+      # Phen = melt(phenotype,iTrait) # make the dataframe
+      # #name = paste("Maturation size of species ",i, sep = "")
+      # 
+      # #short cut the data frame when species does not reach end of simulation
+      # # if (sum(which(Phen$value == TimeMax)) == 0) # if there is at least one value equal to the end of the sim it means that the species survived until then
+      # #   stat = stat[-which(stat$mean == 0),] # first occurence of mean = 0, meaning dead
+      # 
+      # name = paste("Species",i, sep = " ")
+      # 
+      # # prepare the data for the ribbon
+      # g1 <- ggplot(stat)+
+      #   geom_smooth(aes(x = time, y = percentMean-percentSd)) +
+      #   geom_smooth(aes(x= time, y = percentMean+percentSd)) 
+      # 
+      # gg1 <- ggplot_build(g1)
+      # dfRibbon <- data.frame(x = gg1$data[[1]]$x, ymin = gg1$data[[1]]$y, ymax = gg1$data[[2]]$y) #and extract the smooth data for the ribbon
+      # 
+      # if (!Normalisation) stat$percentMean = stat$mean
+      # 
+      # p = ggplot() +
+      #   geom_smooth(data = stat, aes(x = time, y = percentMean)) +
+      #   # geom_ribbon(data = dfRibbon, aes(x = x, ymin = ymin, ymax = ymax), fill = "grey", alpha = 0.4)+
+      #   # geom_hline(yintercept = 0, linetype = "dashed") +
+      #   theme(legend.title=element_blank(),panel.background = element_rect(fill = "white", color = "black"),
+      #         panel.grid.minor = element_line(colour = "grey92"), legend.position="none", 
+      #         legend.justification=c(1,1),legend.key = element_rect(fill = "white"))+ #none remove legend; things below change depending on the graph position
+      #   scale_x_continuous(name = "Time", limits  = c(0,TimeMax)) +
+      #   scale_y_continuous(name = name, limits = c(NA,NA)) + #, breaks = seq(window[1],window[2],0.1)) + #how can seq() be so bad at his only job
+      #   ggtitle(paste("Trait =",iTrait))
+      
+      # data saving
+      stat$species <- i
+      dataStore <- rbind(dataStore,stat)
+      
+      plotStore[[i]] = NULL #p
+      
+      
+    }
+    
+    plotList[[which(iTrait == traitID)]] <- plotStore
+    dataList[[which(iTrait == traitID)]] <- dataStore
+  }
+  
+  #summary plot
+  plot_dat <- dataList[[1]]
+ p<-  ggplot(plot_dat)+
+    geom_smooth(aes(x=time,y=mean, group = as.factor(species), color = as.factor(species) )) +
+    # geom_line(aes(x=time,y=PPMR + sd, group = as.factor(species), color = as.factor(species) ), linetype = "dashed", alpha = .5) +
+    # geom_line(aes(x=time,y=PPMR - sd, group = as.factor(species), color = as.factor(species) ),linetype = "dashed", alpha = .5) +
+    scale_x_continuous(name = "Time in years", limits = c(NA,NA))+
+    scale_y_continuous(trans = "log10")+
+   scale_colour_manual(values=cbPalette, name = "Species")+ # colorblind
+   theme(legend.title=element_text(),panel.background = element_rect(fill = "white", color = "black"),
+          panel.grid.minor = element_line(colour = "grey92"), legend.position="bottom",
+          strip.background = element_blank(),
+          #legend.justification=c(1,1),
+          legend.key = element_rect(fill = "white"))+
+    guides(color = guide_legend(nrow=1)) +
+    # geom_text(size = 5, data = dat_text, mapping = aes(x = - Inf, y = Inf, label = label), hjust = -0.75, vjust = 1.5) +
+    ggtitle(NULL)
+  
+  
+  
+  if(returnData)  return(dataList) else {
+    print(p)
+    return(plotList)}
+  
 }
