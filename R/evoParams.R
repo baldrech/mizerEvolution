@@ -106,8 +106,13 @@ evoParams <- function(no_sp = 11,
                       RDD = "extinctionRDD",
                       egg_size_scaling = FALSE,
                       resource_scaling = FALSE,
-                      perfect_scaling = FALSE) {
+                      perfect_scaling = FALSE,
+                      specificParams = NULL,
+                      interactionMatrix = NULL) {
 
+  
+  if(is.null(specificParams))
+  {
   params <- newTraitParams(
     no_sp = no_sp,
     min_w_inf = min_w_inf,
@@ -139,9 +144,28 @@ evoParams <- function(no_sp = 11,
     egg_size_scaling = egg_size_scaling,
     resource_scaling = resource_scaling,
     perfect_scaling = perfect_scaling)
+  
+  params@species_params$lineage <- as.factor(1:no_sp) # parameter to remember the origin species of the phenotypes
+  
+  } else {
+    # if the species column has characters instead of numeric it becomes annoying
+    speciesName <- specificParams$species
+    specificParams$species <- as.factor(1:dim(specificParams)[1])
+    
+    params <- newMultispeciesParams(specificParams)
+    params@gear_params$species <- as.factor(params@gear_params$species) # for some reason the function above gives species as char
+    params@species_params$lineage <- as.factor(1:dim(params@species_params)[1]) # parameter to remember the origin species of the phenotypes
+    params@species_params$name <- speciesName
+    
+    
+    if(!is.null(interactionMatrix))
+      {
+      dimnames(interactionMatrix) <- list(as.factor(1:dim(inter)[1]),as.factor(1:dim(inter)[2]))
+      params <- setInteraction(params, interaction = interactionMatrix)
+    }
+    }
 
   params@species_params$zeta <- zeta # amplitude of lognorm distribution around trait when generating new phenotype
-  params@species_params$lineage <- as.factor(1:no_sp) # parameter to remember the origin species of the phenotypes
   params@species_params$pop <- 1 # when does the phenotype entered the simulation
   params@species_params$ext <- F # when does the phenotype left the simulation
   params <- setReproduction(params, RDD = RDD)
@@ -412,7 +436,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   {
     for(iTime in 1:(t_max/1)) # for each time step
     {
-      if(mutationPerSteps >= sample(seq(0,100,.1), 1))
+      if(mutationPerSteps > sample(seq(0,100,.1), 1))
         t_mutation[iSpecies,iTime] <- 1
     }
   }
@@ -729,7 +753,7 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   params@gear_params <- rbind(params@gear_params,params@gear_params[species_params$lineage,]) #copy catchability of parent
   levels(params@gear_params$species) <- c(levels(params@gear_params$species),as.character(species_params$species)) # add new factor level (new mutant)
   params@gear_params$species[dim(params@gear_params)[1]] <- species_params$species # correct the mutant name
-  
+
   # new params object ----
   # use dataframe and global settings from params to make a new MizerParams
   # object.
