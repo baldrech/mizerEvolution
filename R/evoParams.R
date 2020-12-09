@@ -108,7 +108,10 @@ evoParams <- function(no_sp = 11,
                       resource_scaling = FALSE,
                       perfect_scaling = FALSE,
                       specificParams = NULL,
-                      interactionMatrix = NULL) {
+                      interactionMatrix = NULL,
+                      ea_int = 0, # temperature parameters
+                      ca_int = 0
+                      ) {
 
   
   if(is.null(specificParams))
@@ -146,6 +149,9 @@ evoParams <- function(no_sp = 11,
     perfect_scaling = perfect_scaling)
   
   params@species_params$lineage <- as.factor(1:no_sp) # parameter to remember the origin species of the phenotypes
+  # temperature parameters
+  params@species_params$ea_int <- ea_int
+  params@species_params$ca_int <- ca_int
   
   } else {
     # if the species column has characters instead of numeric it becomes annoying
@@ -230,8 +236,10 @@ biomass[is.na(biomass)] <- 0 # don;t want any NA from mid-sim popping phenotypes
   for(iSpecies in tempRun@params@species_params$species)
   {
     itime <- dim(tempRun@n)[1]
-    while(sum(tempRun@n[itime,iSpecies,])<=1e-30)
+    count = 0
+    while(sum(tempRun@n[itime,iSpecies,])<=1e-30 && count < dim(tempRun@n)[1])
     {
+      count = count +1
       # print("species")
       # print(iSpecies)
       # print(itime)
@@ -264,7 +272,7 @@ biomass[is.na(biomass)] <- 0 # don;t want any NA from mid-sim popping phenotypes
 #' plot(sim)
 #' }
 evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1, # params and initCondition cannot be both null at same time, need to specify that 
-                       mutation = 2, trait = "w_mat", initPool = 0, initSpread = 5,
+                       mutation = 2, trait = "w_mat", initPool = 0, initSpread = 5, alien = 0,
                        saveFolder = file.path(tempdir(), "simTemp"), effort = 0)
 {
   
@@ -426,6 +434,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   # check if saveFolder is ok
   if(!dir.exists(saveFolder)) dir.create(saveFolder)
   
+  # creating mutation agenda
   if(is.numeric(mutation))
   {
 # users gives a mutation rate per species per year in %, it is converted into a matrix giving which species gets mutant at which time_step
@@ -440,26 +449,49 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
         t_mutation[iSpecies,iTime] <- 1
     }
   }
-  t_event <- apply(t_mutation,2,sum) # t_mutation knows which species mutates and t_event knows which time
-  t_event <- which(t_event >=1)
+    # print("t_mutation")
+    # print(t_mutation)
+  t_phen <- apply(t_mutation,2,sum) # t_mutation knows which species mutates and t_phen knows which time
+  t_phen <- which(t_phen >=1)
   # print(t_mutation)
-  # print(t_event)
-# t_event <- floor(t_event*dt) # need to go back to this dimension as project(that I cannot change) is going to divide by dt
-# but I start to get issues
-# if(t_event[1] == 0) t_event[1] = 1
-#print(t_event)
-#print(t_mutation)
+  # print(t_phen)
+
 #print("mutant timeframe generated")
-  } else if (is.data.frame(mutation))
+  } else if (is.data.frame(mutation)) # temporary case, give a dataframe of species that replaces the adaptation process
   {
     # species invastion case
-    t_event <- mutation$time
+    t_phen <- mutation$time
     #print("invader timeframe received")
   } else (stop("what do you want from me!? I said, numeric only!"))
   
-  # use this if want specific number of mutation
-  # t_event <- sort(sample(1:(t_max-1),mutation))
-  # # corrected_t_event <- t_event+1# need to add 1 per run as they contain a 0 time step (should I get rid of it?)
+  # creating species invasion agenda
+  if(is.numeric(alien))
+  {
+    # users gives a mutation rate per species per year in %, it is converted into a matrix giving which species gets mutant at which time_step
+    # if(initPool) mutationPerSteps <- mutation/initPool else mutationPerSteps <- mutation # every phen can mutate but need to adjust mutation rate or it will increase with hte number of initial phen | not gonna work if it makes mutation per step close to 0 or 1 which it is
+
+    t_invasion <- matrix(0,nrow = 1, ncol = (t_max/1), dimnames = list("alien" , "time" = 1:(t_max/1)))  
+    
+
+      for(iTime in 1:(t_max/1)) # for each time step
+      {
+        if(alien > sample(seq(0,100,.1), 1))
+          t_invasion[iTime] <- 1
+      }
+
+    t_alien <- which(t_invasion >=1)
+
+  } else if (is.data.frame(alien)) # need to write this case properly
+  {
+    # species invastion case
+    t_alien <- mutation$time
+    #print("invader timeframe received")
+  } else (stop("what do you want from me!? I said, numeric only!"))
+  
+# need to mix t_phen and t_alien to calculate the times when to stop mizer
+  
+  t_event <- sort(unique(c(t_phen,t_alien)))
+  
   # # we know when the mutations will appear, now we need to calculate the different time intervals between these mutations
   t_max_vec <- neighbourDistance(x = c(t_event,t_max))
   # print("t_max_vec before correction")
@@ -467,7 +499,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   
   if(t_max_vec[length(t_max_vec)] == 0) t_max_vec <- t_max_vec[-length(t_max_vec)] #if mutant happens at last time step the code crashes so remove it
   
-  cat(sprintf('%i mutants will be added\n', (length(t_max_vec)-1)))
+  # cat(sprintf('%i mutants will be added\n', (length(t_max_vec)-1)))
   # print("mutation planned")
   # print(t_mutation)
   # print("time at mutation")
@@ -480,8 +512,86 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   saveRDS(mySim,file= paste(saveFolder,"/run1.rds", sep = ""))
   for(iSim in 2:length(t_max_vec))
   {
+    lastBiom_updated <- FALSE #if lastBiom gets updated and put in mySim@params@init_n, this becomes true and further species addition use mySim@params@init_n instead of mySim@n[dim(mySim@n)[1],,]
     # print("iSim")
     # print(iSim)
+    print(t_event[iSim-1])
+    # when Mizer stops it can come from new phen, species invasion, or both
+    
+    # new alien
+    if(t_invasion[t_event[iSim-1]]) # if t_invasion is positive it means there is an invasion
+    {
+      #produce alien
+      print("alien trying to invade ecosystem")
+      newSp <- mySim@params@species_params[sample(1:dim(mySim@params@species_params)[1],1),] # for now randomly select a species present and heavely change some parameters
+      newSp$species <- factor(as.character(max(as.numeric(mySim@params@species_params$species))+1), levels = max(as.numeric(mySim@params@species_params$species))+1) # new species name but lineage stays the same
+      newSp$pop <- t_event[iSim-1]
+      newSp$ext <- FALSE
+      newSp$w_inf <- sample(10^(seq(log10(min(mySim@params@species_params$w_inf)), log10(max(mySim@params@species_params$w_inf)), length.out = 100 )),1) # randomly select a size between min and max, log balanced
+      newSp$w_mat <- .25*newSp$w_inf
+      newSp$ks <- abs(newSp$ks + rnorm(1, 0, newSp$zeta * newSp$ks))
+      newSp$beta <- abs(newSp$beta + rnorm(1, 0, newSp$zeta * newSp$beta * 5))
+      newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, newSp$zeta * newSp$sigma * 3))
+      newSp$erepro <- abs(newSp$erepro + rnorm(1, 0, newSp$zeta * newSp$erepro))
+      newSp$lineage <- factor(as.character(max(as.numeric(mySim@params@species_params$lineage))+1), levels = max(as.numeric(mySim@params@species_params$lineage))+1)
+# when creatting alien randomly, might need to test their survivalibility first, in case of crazy values
+      # adding initial biomass and stuff
+      lastBiom <- mySim@n[dim(mySim@n)[1],,]
+      lastBiom_updated <- TRUE
+    # not really sure how much to put for now
+        
+        n_newSp <- rep(0,dim(mySim@n)[3])
+      #need to create size spectrum of abundance from one value
+      n0_mult = 10 # keeping this NULL for now, might make it an invasion param (boost the initial abundance) | apparently the initial biomass of the invading species are really low
+      a = 0.35
+      no_w <- length(mySim@params@w)
+      initial_n <- array(NA, dim = c(1, no_w))
+      # N = N0 * Winf^(2*n-q-2+a) * w^(-n-a)
+      # Reverse calc n and q from intake_max and search_vol slots (could add get_n function)
+      n <- (log(mySim@params@intake_max[,1] / mySim@params@species_params$h) / log(mySim@params@w[1]))[1]
+      q <- (log(mySim@params@search_vol[,1] / mySim@params@species_params$gamma) / log(mySim@params@w[1]))[1]
+      # Guessing at a suitable n0 value based on kappa - this was figured out using trial and error and should be updated
+      if (is.null(n0_mult)) {
+        lambda <- 2 + q - n
+        kappa <- mySim@params@cc_pp[1] / (mySim@params@w_full[1]^(-lambda))
+        n0_mult <- kappa / 1000
+      }
+      initial_n <- unlist(tapply(mySim@params@w, 1:no_w, function(wx,n0_mult,w_inf,a,n,q)
+        n0_mult * w_inf^(2 * n - q - 2 + a) * wx^(-n - a),
+        n0_mult = n0_mult, w_inf = newSp$w_inf, a=a, n=n, q=q))
+      #set densities at w > w_inf to 0
+      initial_n[unlist(tapply(mySim@params@w,1:no_w,function(wx,w_inf) w_inf<wx, w_inf=newSp$w_inf))] <- 0
+      # Also any densities at w < w_min set to 0
+      initial_n[unlist(tapply(mySim@params@w,1:no_w,function(wx,w_min)w_min>wx, w_min=newSp$w_inf))] <- 0    
+      n_newSp <- t(initial_n)
+
+      init_n <- rbind(lastBiom,n_newSp) # this include the new mutant as last column
+      names(dimnames(init_n)) <- c("sp","w")
+      # print(newSp)
+      rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
+      
+      mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
+      print("alien invaded the ecosystem")
+    }
+    
+    
+    # new phen
+    if(sum(t_mutation[,t_event[iSim-1]])) # if it's positive it means at least on phen appears
+    {
+    resident_list <- as.character(which(t_mutation[,t_event[iSim-1]]>0))
+    
+    for(resident_lineage in resident_list) # loop to handle multiple species additions at once
+    {
+    # if(length(resident_list)>1)
+    # {
+    #   print("more than one phen going to be added")
+    #   count <- which(resident_lineage == resident_list)
+    #   cat(sprintf("phen number %i \n", count))
+    #   
+    #   
+    # }
+    
+    
     if(is.numeric(mutation))
     {
     ## new mutant param
@@ -496,8 +606,9 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
       # print(t_max_vec)
       # print("resident")
       # print(which(t_mutation[,t_event[iSim-1]]>0))
-   resident_lineage <- as.character(which(t_mutation[,t_event[iSim-1]]>0)[1]) # not handling 2 new mutatns at the same time for now
-   resident <- as.character(sample(mySim@params@species_params$species[which(mySim@params@species_params$lineage == resident_lineage)],1)) 
+      print("new phenotype born")
+
+         resident <- as.character(sample(mySim@params@species_params$species[which(mySim@params@species_params$lineage == resident_lineage)],1)) 
     # print(mySim@n[,resident,1:2])
     phenCount <- 0
     while(sum(mySim@n[t_max_vec[iSim-1],resident,]) < 2e-28) # if resident is too low abundance, cannot produce a new phenotype that would be under the extinction threshol (need to put it as variables)
@@ -639,7 +750,10 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
            })
     
     # set the abundance for all species to start a new project
-    lastBiom <- mySim@n[dim(mySim@n)[1],,]
+    if(lastBiom_updated) # for all mutants after the first one being added, the initial value is already stored in the params instead of previous sim last time step
+    lastBiom <- mySim@params@initial_n
+    else lastBiom <- mySim@n[dim(mySim@n)[1],,]
+    lastBiom_updated <- TRUE
     #n_newSp <- rep(0,dim(mySim@n)[3])
     n_newSp = 0.05 * lastBiom[dimnames(mySim@n)$sp == resident,] # the initial abundance is 5% of the resident pop
     lastBiom[dimnames(mySim@n)$sp ==resident,]= lastBiom[dimnames(mySim@n)$sp == resident,] - 0.05*lastBiom[dimnames(mySim@n)$sp ==resident,] # Witdraw the abundance of the mutant from its parent (we're not talking about eggs here but different ecotype already present)
@@ -650,6 +764,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   newSp <- mutation[iSim-1,]
   
   lastBiom <- mySim@n[dim(mySim@n)[1],,]
+  lastBiom_updated <- TRUE
   n_newSp <- rep(0,dim(mySim@n)[3])
   #need to create size spectrum of abundance from one value
   n0_mult = mutation$init_n_multiplier
@@ -684,17 +799,30 @@ n_newSp <- t(initial_n)
     names(dimnames(init_n)) <- c("sp","w")
     # print(newSp)
     rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
-    params <- addSpecies(params = params, species_params = newSp, init_n= init_n)
+    
+    
+
+    
+    print("new phenotype implemented")
+    
+    mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
+    
+
+
+      
+    }
+    }
     # print("mutant integrated in ecosystem, ready to project")
     if(t_max_vec[iSim]>0)
       {# happens if mutant appears at the last time step, makes the code crash | probably obsolete but does not hurt anyone
-    mySim <- project(params, t_max = t_max_vec[iSim],progress_bar = F, effort = effort)
+    mySim <- project(mySim@params, t_max = t_max_vec[iSim],progress_bar = F, effort = effort)
     # print("projected until next mutant, ready to save truncated run")
     saveRDS(mySim,file= paste(saveFolder,"/run",iSim,".rds", sep = ""))
     }
   }
 # return(list(saveFolder,params,t_max))
-  sim <- finalTouch(saveFolder = saveFolder, params = params, t_max = t_max)
+    print("Data handling")
+  sim <- finalTouch(saveFolder = saveFolder, params = mySim@params, t_max = t_max)
   unlink(saveFolder,recursive = T)
 
   return(sim)
@@ -885,6 +1013,23 @@ extinctionRDD <- function(rdi, species_params, ...) {
 }
 
 
+#' tempFun is a function that takes temperature parameters (temperature, t_ref, t_d) and physiological parameters (w, Ea, c_a)
+#' and returns a scalar based on the Padfield (2016) temperature performance equation. This will be upgraded in the future with
+#' a deactivation portion with Anna Gardmark's equation once it's published
+tempFun <- function(w, temperature, t_ref, Ea, c_a)
+{
+  k = 8.617332e-5 # Boltzmann constant 
+  # equation
+  # (w^(c_a*(temperature-t_ref)))  *exp((-Ea/8.617332e-5)*((1/temperature) - (1/t_ref)))
+  
+  # converting to Kelvin from Celcius
+  temperature <- temperature + 273 
+  t_ref <- t_ref + 273
+  
+  
+  temperatureScalar <- t(sapply(w,FUN = function(x){x^(c_a*(temperature-(t_ref)))}) *exp((-Ea/k)*((1/temperature) - (1/(t_ref)))))
+  return(temperatureScalar)
+}
 
 
 plotDynamics <- function(object, time_range = c(min(as.numeric(dimnames(object@n)$time)),max(as.numeric(dimnames(object@n)$time))), 
