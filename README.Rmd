@@ -11,7 +11,7 @@ output:
 ```{r, initialisation, echo = FALSE, message=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  cache = FALSE,
+  cache = TRUE,
   message = FALSE,
   warning = FALSE,
   comment = "#>",
@@ -571,9 +571,11 @@ New plot function have also been introduced to track the change in trait value t
 
 ## Future updates
 
-- Fast initialisation
 - What else?
 
 
+bug to fix:
 
+try ecosystem with more than 10 species
+plotDynamics get errors when looking at species 2 with a 13 species based ecosystem
 

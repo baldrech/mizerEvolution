@@ -78,7 +78,7 @@ size.
 
 ``` r
 sim <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
-#> 28 mutants will be added
+#> 29 mutants will be added
 ```
 
 This produces an object of class `MizerSim` which contains the results
