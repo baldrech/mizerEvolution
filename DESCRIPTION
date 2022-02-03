@@ -7,17 +7,27 @@ Authors@R:
            role = c("aut", "cre"),
            email = "romain.forestier@utas.edu.au",
            comment = c(ORCID = "0000-0002-6571-9222"))
-Description: With MizerEvo you can ...
+Description: With MizerEvolution you can simulate trait 
+    evolution and species invasion in the Mizer environment.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2
 Depends:
     R (>= 3.1),
     mizer (>= 2.0.1)
+Imports:
+    ggplot2,
+    dplyr,
+    methods,
+    reshape2,
+    grDevices,
+    stats
 Collate:
     evoParams.R
     help.R
+    mizerEvolution-package.R
+    plots.R
 Suggests: 
     testthat

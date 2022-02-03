@@ -40,10 +40,10 @@ code for mizerEvolution is hosted on
 
 ## Setting the model parameters
 
-As with Mizer, you first need to creat an object of `class ?
-MizerParams`. At the moment, the wrapper function `evoParams()` helps
+As with Mizer, you first need to creat an object of class
+`MizerParams`. At the moment, the wrapper function `evoParams()` helps
 you create this object. It is a tweaked version of `newTraitParams`
-which add the necessary parameters to support species evolution,
+which adds the necessary parameters to support species evolution,
 therefore all the default parameters from Mizer are found back in this
 function. `evoParams()` adds the `lineage` parameter which is used to
 track the ancetry tree of species and the `RDD` parameter which is used
