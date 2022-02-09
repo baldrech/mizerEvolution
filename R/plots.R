@@ -33,7 +33,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
                          print_it = T, returnData = F, save_it = F,
                          nameSave = "Biomass.png", ylimit = c(NA,NA)){
 
-    cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
+    # cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
     jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")) # colorful gradient
     min_value <- 1e-30
     # get the phenotype biomass through time (need at least 2 time steps for now)
@@ -75,6 +75,8 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
     BiomSp <- BiomSp[BiomSp$value >= min_value,]
 
 
+    color_legend <- object@params@linecolour[SpIdx]
+
     if (phenotype) # are we displaying the phenotypes or just species total?
     {
 
@@ -93,7 +95,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
             theme(panel.background = element_rect(fill = "white", color = "black"),
                   panel.grid.minor = element_line(colour = "grey92"),
                   legend.key = element_rect(fill = "white"))+
-            scale_colour_manual(values=cbPalette)+ # colorblind
+            scale_colour_manual(values=color_legend)+
             ggtitle("Community biomass")
 
 
@@ -139,7 +141,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
             theme(panel.background = element_rect(fill = "white", color = "black"),
                   panel.grid.minor = element_line(colour = "grey92"),
                   legend.key = element_rect(fill = "white"))+
-            scale_colour_manual(values=cbPalette)+ # colorblind
+            scale_colour_manual(values=color_legend)+
             ggtitle("Community biomass")
     }
 
@@ -1026,8 +1028,6 @@ plotevoTrait <- function(object, SpIdx = NULL, Normalisation = F, returnData = T
 
 
 
-    if(returnData)  return(dataList) else {
-        print(p)
-        return(plotList)}
+    if(returnData)  return(dataList) else return(p)
 
 }
