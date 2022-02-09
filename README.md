@@ -40,25 +40,26 @@ code for mizerEvolution is hosted on
 
 ## Setting the model parameters
 
-As with Mizer, you first need to creat an object of class
-`MizerParams`. At the moment, the wrapper function `evoParams()` helps
-you create this object. It is a tweaked version of `newTraitParams`
-which adds the necessary parameters to support species evolution,
-therefore all the default parameters from Mizer are found back in this
-function. `evoParams()` adds the `lineage` parameter which is used to
-track the ancetry tree of species and the `RDD` parameter which is used
-to set the recruitment function. It’s default is `extinctionRDD()` which
-allow species to be removed from the ecosystem when they reach an
-abundance below \(10^{-30}ind.m^{-3}\). In mizerEvolution, evolution
-comes from allowing specific parameters to change through time. These
-parameters are defined in the `trait` argument of `evoProject`. During
-the simulation, species will be considered as pool of phenotypes, each
-with a slighty different trait value. These phenotypes are generated
-semi-randomly, using only a rate of apparition inputed by the user. The
-phenotypes compete between each others and are pooled together only
-during the reproduction phase since they are still part of a same
-species. Generating phenotypes and removing the less abundant proxy
-natural selection and trait adaptation.
+As with Mizer, you first need to create an object of
+`class ? MizerParams`. At the moment, the wrapper function `evoParams()`
+helps you create this object. It is a tweaked version of
+`newTraitParams` which add the necessary parameters to support species
+evolution, therefore all the default parameters from Mizer are found
+back in this function. `evoParams()` adds the `lineage` parameter which
+is used to track the ancetry tree of species and the `RDD` parameter
+which is used to set the recruitment function. It’s default is
+`extinctionRDD()` which allow species to be removed from the ecosystem
+when they reach an abundance below
+10<sup> − 30</sup>*i**n**d*.*m*<sup> − 3</sup>. In mizerEvolution,
+evolution comes from allowing specific parameters to change through
+time. These parameters are defined in the `trait` argument of
+`evoProject`. During the simulation, species will be considered as pool
+of phenotypes, each with a slighty different trait value. These
+phenotypes are generated semi-randomly, using only a rate of apparition
+inputed by the user. The phenotypes compete between each others and are
+pooled together only during the reproduction phase since they are still
+part of a same species. Generating phenotypes and removing the less
+abundant proxy natural selection and trait adaptation.
 
 ``` r
 params <- evoParams(no_sp = 5 )
@@ -73,12 +74,11 @@ new phenotypes using the `mutation` parameter (rate of apparition of new
 phenotypes in the simulation). The `trait` parameter determines which
 species parameter is going to vary during the simulation and
 differentiate phenotypes between each other within each species. The
-default is set to `w_mat`, the maturation
-size.
+default is set to `w_mat`, the maturation size.
 
 ``` r
 sim <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
-#> 29 mutants will be added
+#> [1] "Data handling"
 ```
 
 This produces an object of class `MizerSim` which contains the results
@@ -111,41 +111,29 @@ In this default Mizer plot, added phenotypes are considered as new
 species.
 
 <!-- Just as an example: we might be interested in how the proportion of large fish -->
-
 <!-- varies over time. We can get the proportion of Herrings in terms of biomass that -->
-
 <!-- have a weight above 50g in each of the 10 years: -->
-
 <!-- ```{r} -->
-
 <!-- getProportionOfLargeFish(sim,  -->
-
 <!--                          #species = "Herring",  -->
-
 <!--                          threshold_w = 50,  -->
-
 <!--                          biomass_proportion = TRUE) -->
-
 <!-- ``` -->
-
 <!-- We can then use the full power of R to work with these results. -->
-
 <!-- The functionality provided by mizer to explore the simulation results is more -->
-
 <!-- fully described in  -->
-
 <!-- [the section on exploring the simulation results.](exploring_the_simulation_results.html) -->
 
 ## Package functionalities
 
-  - New species are copy of existing ones albeit with a change to one
+-   New species are copy of existing ones albeit with a change to one
     trait.
 
-  - Each projections containing a new species is independent of the
+-   Each projections containing a new species is independent of the
     others. They are saved in a temporary folder before being binded at
     the end of the simulation
 
-  - New plot functions allow to explore the evolutionary results
+-   New plot functions allow to explore the evolutionary results
 
 ## Algorithm
 
@@ -167,8 +155,8 @@ wich is usable by any vanilla Mizer functions.
 ## Plotting evolutionary results
 
 base Mizer functions cannot handle species being formed of different
-“sub-species” so all plot functions have been updated to show species
-or their “phenotypes” using the `lineage` parameter
+“sub-species” so all plot functions have been updated to show species or
+their “phenotypes” using the `lineage` parameter
 
 Checking the biomass through time. The default plot has a colorblind of
 10 colors and won’t work with more than 10 species, if you want to
@@ -226,14 +214,12 @@ The size spectrum plot can display abundance density or biomass with the
 biomass argument
 
 ``` r
-
 plotSS(sim,biomass = F)
 ```
 
 ![](man/figures/sizespectrum1-1.png)<!-- -->
 
 ``` r
-
 plotSS(sim,biomass = T)
 ```
 
@@ -242,7 +228,6 @@ plotSS(sim,biomass = T)
 It can also display 3 levels of grouping: community, species, phenotypes
 
 ``` r
-
 plotSS(sim, community = T)
 ```
 
@@ -263,7 +248,6 @@ plotSS(sim, species = F)
 ### Feeding level
 
 ``` r
-
 plotevoFeeding(sim)
 ```
 
@@ -272,7 +256,6 @@ plotevoFeeding(sim)
 ### Growth
 
 ``` r
-
 plotevoGrowth(sim)
 ```
 
@@ -281,7 +264,6 @@ plotevoGrowth(sim)
 ## Mortality
 
 ``` r
-
 plotevoMortality(sim)
 ```
 
@@ -290,73 +272,40 @@ plotevoMortality(sim)
 ## Trait evolution
 
 ``` r
-
 plotevoTrait(sim, traitID = "beta", returnData = F)
 ```
 
 ![](man/figures/plotevoTrait-1.png)<!-- -->
 
-    #> [[1]]
-    #> list()
-
-The following plots are not avaialble on this version yet but are
-examples of what you can get with biomass data and trait evolution
-through time.
-
-The biomass per trait value of one species through time
-
-![](man/figures/Default%20sim%20phenotypique%20diversity-1.png)<!-- -->
-
-The trait value through time. It’s shown at the species level which is
-the biomass weighted average of the species’ phenotypes
-
-![](man/figures/trait%20through%20time-1.png)<!-- -->
-
-Looking at the fitness of one species (total spawn output throughtout
-lifetime) per trait value
-
-![](man/figures/fitness-1.png)<!-- -->
-
-When two traits are involved
-
-![](man/figures/fitness%202%20traits-1.png)<!-- -->
-
-Checking the average number of phenotypes per species through time.
-
-![](man/figures/number%20of%20phenotypes-1.png)<!-- -->
+<!-- The following plots are not available on this version yet but are examples of what you can get with biomass data and trait evolution through time. -->
+<!-- The biomass per trait value of one species through time -->
+<!-- The trait value through time. It's shown at the species level which is the biomass weighted average of the species' phenotypes -->
+<!-- Looking at the fitness of one species (total spawn output throughtout lifetime) per trait value -->
+<!-- When two traits are involved -->
+<!-- Checking the average number of phenotypes per species through time. -->
 
 ## Species invasion
 
-Instead of generating phenotypic diverstity within existing species, the
+Instead of generating phenotypic diversity within existing species, the
 model can instead introduce mutants in an existing ecosystem. One just
 needs to give a data frame to the mutation argument instead of a
 numeric.
 
 ``` r
-
 params<- evoParams()
 
 alien <- params@species_params[4:5,] # copy existing data frame
 alien$h <- 50 # change some parameters
 alien$alpha <- .6
 alien$time <- c(50,75) # when are the invasive species coming in?
-alien$lineage <- factor(99,levels = 99) # need to specify a lineage for these species otherwise they will be related to the endemic ones
+alien$lineage <- factor(c(12,13),levels = c(12,13)) # need to specify a lineage for these species otherwise they will be related to the endemic ones
 alien$init_n_multiplier <- NULL # multiplier for the initial abundance
+alien$species <- as.character(c(12,13))
 
-sim <- evoProject(params = params, mutation = alien)
-#> 2 mutants will be added
-plot(sim)
+#important: for now need to add new species following the number of existing species (e.g. generated ecosystem contains 11 species so first invading species is 12). Does not work otherwise
+sim <- evoProject(params = params, alien = alien, mutation = 0)
+#> [1] "Data handling"
+plotDynamics(sim)
 ```
 
 ![](man/figures/species%20invasion-1.png)<!-- -->
-
-New plot function have also been introduced to track the change in trait
-value through time and to calculate the fitness of each species (here
-being the total spawn output throughout lifetime of a cohort, averaged
-per individual) to study the effect of the evolutionary processes on the
-ecoystem
-
-## Future updates
-
-  - Fast initialisation
-  - What else?
