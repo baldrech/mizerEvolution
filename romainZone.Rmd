@@ -6,8 +6,6 @@ author: "RF"
 
 TODO
 
-check package structure
-add ggplot2 dependency and dplyr
 plotevotrait outputs an empty list with the plot
 
 plotDynamics has an error more than 9 species have to been plotted (not enough colors) need to do a case about that

@@ -26,6 +26,12 @@ require(grid)
 
 ```
 
+```{r, github rendering, eval = F, eval=FALSE, include = FALSE}
+
+render("README.Rmd", md_document(variant = "gfm"))
+
+```
+
 
 ## Overview
 The mizerEvolution package is an extension of the mizer package (ref) and simulate evolutionary processes within a size-structured model.
@@ -63,7 +69,7 @@ The source code for mizerEvolution is hosted on [Github.](https://github.com/bal
 
 ## Setting the model parameters
 
-As with Mizer, you first need to creat an object of `class ? MizerParams`. At the moment, the wrapper function `evoParams()` helps you create this object. It is a tweaked version of `newTraitParams` which add the necessary parameters to support species evolution, therefore all the default parameters from Mizer are found back in this function. `evoParams()` adds the `lineage` parameter which is used to track the ancetry tree of species and the `RDD` parameter which is used to set the recruitment function. It's default is `extinctionRDD()` which allow species to be removed from the ecosystem when they reach an abundance below $10^{-30}ind.m^{-3}$. In mizerEvolution, evolution comes from allowing specific parameters to change through time. These parameters are defined in the `trait` argument of `evoProject`. During the simulation, species will be considered as pool of phenotypes, each with a slighty different trait value. These phenotypes are generated semi-randomly, using only a rate of apparition inputed by the user. The phenotypes compete between each others and are pooled together only during the reproduction phase since they are still part of a same species. Generating phenotypes and removing the less abundant proxy natural selection and trait adaptation.
+As with Mizer, you first need to create an object of `class ? MizerParams`. At the moment, the wrapper function `evoParams()` helps you create this object. It is a tweaked version of `newTraitParams` which add the necessary parameters to support species evolution, therefore all the default parameters from Mizer are found back in this function. `evoParams()` adds the `lineage` parameter which is used to track the ancetry tree of species and the `RDD` parameter which is used to set the recruitment function. It's default is `extinctionRDD()` which allow species to be removed from the ecosystem when they reach an abundance below $10^{-30}ind.m^{-3}$. In mizerEvolution, evolution comes from allowing specific parameters to change through time. These parameters are defined in the `trait` argument of `evoProject`. During the simulation, species will be considered as pool of phenotypes, each with a slighty different trait value. These phenotypes are generated semi-randomly, using only a rate of apparition inputed by the user. The phenotypes compete between each others and are pooled together only during the reproduction phase since they are still part of a same species. Generating phenotypes and removing the less abundant proxy natural selection and trait adaptation.
 
 
 
@@ -77,7 +83,7 @@ params <- evoParams(no_sp = 5 )
 
 This is done by calling the `evoProject()` function (as in "project forward in time") with the model parameters. Similar to Mizer's `project()`, `evoProject()` projects the simulation in time while adding new phenotypes using the `mutation` parameter (rate of apparition of new phenotypes in the simulation). The `trait` parameter determines which species parameter is going to vary during the simulation and differentiate phenotypes between each other within each species. The default is set to `w_mat`, the maturation size.
 
-```{r, projection}
+```{r, projection, message=FALSE,}
 sim <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
 ```
 
@@ -233,11 +239,11 @@ plotevoTrait(sim, traitID = "beta", returnData = F)
 ```
 
 
-The following plots are not avaialble on this version yet but are examples of what you can get with biomass data and trait evolution through time.
+<!-- The following plots are not available on this version yet but are examples of what you can get with biomass data and trait evolution through time. -->
 
-The biomass per trait value of one species through time
+<!-- The biomass per trait value of one species through time -->
 
-```{r Default sim phenotypique diversity, echo = F}
+```{r Default sim phenotypique diversity, echo = F, eval = F}
 
 myDat <- readRDS("~/predationChapter/romainZone/completeBiomData.rds")
 jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")) # colorful gradient
@@ -261,11 +267,11 @@ p4
 
 ```
 
-The trait value through time. It's shown at the species level which is the biomass weighted average of the species' phenotypes
+<!-- The trait value through time. It's shown at the species level which is the biomass weighted average of the species' phenotypes -->
 
 
 
-```{r trait through time, echo = F}
+```{r trait through time, echo = F, eval = F}
 
 ## Pannel b) - Trait variation with predation ==============
 colfunc <- colorRampPalette(c("firebrick3","darkturquoise", "orange"))
@@ -356,11 +362,11 @@ p2
 ```
 
 
-Looking at the fitness of one species (total spawn output throughtout lifetime) per trait value
+<!-- Looking at the fitness of one species (total spawn output throughtout lifetime) per trait value -->
 
 
 
-```{r fitness, echo = F}
+```{r fitness, echo = F, eval = F}
 iTime =1
 fitnessNorm <- readRDS("/rd/gem/private/users/romainf/MizerEvo/Sim9/fitnessSaves2.0/fitnessNormal.rds")
 fitnessFish <- readRDS("/rd/gem/private/users/romainf/MizerEvo/Sim9/fitnessSaves2.0/fitnessFisheries.rds")
@@ -433,10 +439,10 @@ p1
 ```
 
 
-When two traits are involved
+<!-- When two traits are involved -->
 
 
-```{r fitness 2 traits, echo = F}
+```{r fitness 2 traits, echo = F, eval = F}
 
 KKNNIn <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/initAdd/KKNN.rds")
 KKNNGW <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/GW/backup/KKNN.rds")
@@ -486,10 +492,10 @@ p1
 ```
 
 
-Checking the average number of phenotypes per species through time.
+<!-- Checking the average number of phenotypes per species through time. -->
 
 
-```{r number of phenotypes, echo = F}
+```{r number of phenotypes, echo = F, eval = F}
 
 plot_datPred <- readRDS(file = "~/mizerFIE/romainZone/PhenDataPred.rds")
 plot_datPred <- plot_datPred[[1]]
@@ -542,7 +548,7 @@ p
 
 ## Species invasion
 
-Instead of generating phenotypic diverstity within existing species, the model can instead introduce mutants in an existing ecosystem. One just needs to give a data frame to the mutation argument instead of a numeric.
+Instead of generating phenotypic diversity within existing species, the model can instead introduce mutants in an existing ecosystem. One just needs to give a data frame to the mutation argument instead of a numeric.
 
 ```{r species invasion}
 
@@ -552,11 +558,13 @@ alien <- params@species_params[4:5,] # copy existing data frame
 alien$h <- 50 # change some parameters
 alien$alpha <- .6
 alien$time <- c(50,75) # when are the invasive species coming in?
-alien$lineage <- factor(99,levels = 99) # need to specify a lineage for these species otherwise they will be related to the endemic ones
+alien$lineage <- factor(c(12,13),levels = c(12,13)) # need to specify a lineage for these species otherwise they will be related to the endemic ones
 alien$init_n_multiplier <- NULL # multiplier for the initial abundance
+alien$species <- as.character(c(12,13))
 
-sim <- evoProject(params = params, mutation = alien)
-plot(sim)
+#important: for now need to add new species following the number of existing species (e.g. generated ecosystem contains 11 species so first invading species is 12). Does not work otherwise
+sim <- evoProject(params = params, alien = alien, mutation = 0)
+plotDynamics(sim)
 
 ```
 
@@ -565,15 +573,7 @@ plot(sim)
 
 
 
-New plot function have also been introduced to track the change in trait value through time and to calculate the fitness of each species (here being the total spawn output throughout lifetime of a cohort, averaged per individual) to study the effect of the evolutionary processes on the ecoystem
-
-## Future updates
-
-- What else?
 
 
-bug to fix:
 
-try ecosystem with more than 10 species
-plotDynamics get errors when looking at species 2 with a 13 species based ecosystem
 
