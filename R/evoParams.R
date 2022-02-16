@@ -66,6 +66,10 @@
 #' @param perfect_scaling If TRUE then parameters are set so that the community
 #'   abundance, growth before reproduction and death are perfect power laws. In
 #'   particular all other scaling corrections are turned on.
+#' @param specificParams ...
+#' @param interactionMatrix ...
+#' @param ea_int ...
+#' @param ca_int ...
 #' @export
 #' @return An object of type `MizerParams`
 #' @family functions for setting up models
@@ -256,10 +260,17 @@ finalTouch <- function(saveFolder,params,t_max)
 
 #' Project
 #'
+#' @param initCondition ...
 #' @param params ...
 #' @param t_max ...
+#' @param dt ...
 #' @param mutation ...
+#' @param trait ...
+#' @param initPool ...
+#' @param initSpread ...
+#' @param alien ...
 #' @param saveFolder ...
+#' @param effort ...
 #' @return ...
 #' @export
 #' @examples
@@ -470,21 +481,21 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   } else (stop("what do you want from me!? I said, numeric only!"))
 
   # creating species invasion agenda
-  if(is.numeric(alien)) # this case doesn't work yet. I don;t know how many rows to put in t_invasion. should alien be new species? how usefull is t_invasion? just come from copying t_mutation
+  if(is.numeric(alien)) # this case doesn't work yet. I don;t know how many rows to put in t_invasion. should alien be new species? how useful is t_invasion? just come from copying t_mutation
   {
-    # users gives a mutation rate per species per year in %, it is converted into a matrix giving which species gets mutant at which time_step
-    # if(initPool) mutationPerSteps <- mutation/initPool else mutationPerSteps <- mutation # every phen can mutate but need to adjust mutation rate or it will increase with hte number of initial phen | not gonna work if it makes mutation per step close to 0 or 1 which it is
-
     t_invasion <- matrix(0,nrow = length(SpIdx), ncol = (t_max/1), dimnames = list("alien" = SpIdx , "time" = 1:(t_max/1)))
 
 
     for(iTime in 1:(t_max/1)) # for each time step
     {
       if(alien > sample(seq(0,100,.1), 1))
-        t_invasion[iTime] <- 1
+        t_invasion[,iTime] <- 1
     }
 
-    t_alien <- which(t_invasion >=1)
+    t_alien <- apply(t_invasion,2,sum) # t_mutation knows which species mutates and t_phen knows which time
+    t_alien <- which(t_alien >=1)
+    # print("t_alien")
+    # print(t_alien)
 
   } else if (is.data.frame(alien)) # need to write this case properly
   {
@@ -529,9 +540,11 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
       # when Mizer stops it can come from new phen, species invasion, or both
 
       # new alien
-      # print("t_invasion")
-      # print(t_invasion)
-
+#       print("t_invasion")
+#       print(t_invasion)
+#       print(t_event[iSim-1])
+#       print(t_invasion[,t_event[iSim-1]])
+# print(sum(t_invasion[,t_event[iSim-1]]))
         if(sum(t_invasion[,t_event[iSim-1]])) # if t_invasion is positive it means there is an invasion
         {
           if(is.numeric(alien))
@@ -563,7 +576,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
 
           n_newSp <- rep(0,dim(mySim@n)[3])
           #need to create size spectrum of abundance from one value
-          n0_mult = 10 # keeping this NULL for now, might make it an invasion param (boost the initial abundance) | apparently the initial biomass of the invading species are really low
+          n0_mult = 10 # (boost the initial abundance) | apparently the initial biomass of the invading species are really low
           a = 0.35
           no_w <- length(mySim@params@w)
           initial_n <- array(NA, dim = c(1, no_w))
@@ -577,22 +590,28 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
             kappa <- mySim@params@cc_pp[1] / (mySim@params@w_full[1]^(-lambda))
             n0_mult <- kappa / 1000
           }
+
           initial_n <- unlist(tapply(mySim@params@w, 1:no_w, function(wx,n0_mult,w_inf,a,n,q)
             n0_mult * w_inf^(2 * n - q - 2 + a) * wx^(-n - a),
             n0_mult = n0_mult, w_inf = newSp$w_inf, a=a, n=n, q=q))
+
+          # print("init_n")
+          # print(initial_n)
+
           #set densities at w > w_inf to 0
           initial_n[unlist(tapply(mySim@params@w,1:no_w,function(wx,w_inf) w_inf<wx, w_inf=newSp$w_inf))] <- 0
           # Also any densities at w < w_min set to 0
-          initial_n[unlist(tapply(mySim@params@w,1:no_w,function(wx,w_min)w_min>wx, w_min=newSp$w_inf))] <- 0
+          initial_n[unlist(tapply(mySim@params@w,1:no_w,function(wx,w_min)w_min>wx, w_min=newSp$w_min))] <- 0
           n_newSp <- t(initial_n)
+          # print("n_newSp")
+          # print(n_newSp)
 
           init_n <- rbind(lastBiom,n_newSp) # this include the new mutant as last column
           names(dimnames(init_n)) <- c("sp","w")
           # print("new invader")
           # print(newSp)
           rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
-          # print("init_n")
-          # print(dimnames(init_n)[1])
+
 
           mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
           # print("alien invaded the ecosystem")
