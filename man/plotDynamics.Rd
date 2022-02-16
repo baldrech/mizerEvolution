@@ -6,18 +6,47 @@
 \usage{
 plotDynamics(
   object,
-  time_range = c(min(as.numeric(dimnames(object@n)$time)),
-    max(as.numeric(dimnames(object@n)$time))),
   phenotype = TRUE,
   species = NULL,
   trait = NULL,
   SpIdx = NULL,
+  time_range = c(min(as.numeric(dimnames(object@n)$time)),
+    max(as.numeric(dimnames(object@n)$time))),
   print_it = T,
   returnData = F,
   save_it = F,
   nameSave = "Biomass.png",
   ylimit = c(NA, NA)
 )
+}
+\arguments{
+\item{object}{An object of class \linkS4class{MizerSim}}
+
+\item{phenotype}{A boolean value to display the phenotype's
+abundance on the plot. Default is TRUE}
+
+\item{species}{Plot only a specific species and its phenotypes
+Default is NULL}
+
+\item{trait}{Display the trait value as color gradient. Works
+only if \code{species} is not NULL}
+
+\item{SpIdx}{Display a subset of species}
+
+\item{time_range}{The time range (either a vector of values, a vector of min
+and max time, or a single value) to average the abundances over. Default is
+the final time step.}
+
+\item{print_it}{A boolean value that displays comments. Default is TRUE}
+
+\item{returnData}{A boolean value that controls the output. Either a dataframe
+ready for ggplot (TRUE) or the plot itself (FALSE). Default is FALSE}
+
+\item{save_it}{...}
+
+\item{nameSave}{...}
+
+\item{ylimit}{To edit the y axis scale on the plot}
 }
 \value{
 A plot

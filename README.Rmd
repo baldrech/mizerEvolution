@@ -26,7 +26,7 @@ require(grid)
 
 ```
 
-```{r, github rendering, eval = F, eval=FALSE, include = FALSE}
+```{r, github_rendering, eval = F, eval=FALSE, include = FALSE}
 
 render("README.Rmd", md_document(variant = "gfm"))
 
@@ -73,7 +73,7 @@ As with Mizer, you first need to create an object of `class ? MizerParams`. At t
 
 
 
-```{r, new params}
+```{r, new_params}
 params <- evoParams(no_sp = 5 )
 ```
 
@@ -99,7 +99,7 @@ The parameter `initCondition` allows to input a mizer object instead of a mizer 
 After a simulation has been run, the results can be examined using a range of `?plotting_functions`, `?summary_functions`
 and `?indicator_functions`.
 The `plot()` function combines several of these plots into one:
-```{r, diagnostic plot}
+```{r, diagnostic_plot}
 plot(sim)
 ```
 
@@ -145,14 +145,14 @@ Checking the biomass through time. The default plot has a colorblind of 10 color
 ### plotDynamics
 
 plotDynamics output the same results as plotBiomass (species' biomass thorugh time) if the phenotype argument is set to FALSE
-```{r, plotDynamics 1}
+```{r, plotDynamics1}
 plotDynamics(sim, phenotype = F)
 
 ```
 
 Showing the phenotypes as semi-transparent lines, with phenotype = TRUE (default)
 
-```{r plotDynamics 2}
+```{r plotDynamics2}
 plotDynamics(sim, phenotype = T)
 
 ```
@@ -160,7 +160,7 @@ plotDynamics(sim, phenotype = T)
 
 The species argument displays all the phenotypes of one species only (take species identity as value)
 
-```{r plotDynamics 3}
+```{r plotDynamics3}
 plotDynamics(sim,species = 2)
 
 ```
@@ -168,14 +168,14 @@ plotDynamics(sim,species = 2)
 
 The trait value of the phenotypes can be displayed per phenotypes as a continuous gradient, only available when only one species is selected
 
-```{r plotDynamics 4}
+```{r plotDynamics4}
 plotDynamics(sim, species = 2, trait = sim@params@species_params$beta)
 
 ```
 
 The SpIdx argument selects for a subset of species
 
-```{r plotDynamics 5}
+```{r plotDynamics5}
 plotDynamics(sim,SpIdx = c(1,2,3))
 
 ```
@@ -243,7 +243,7 @@ plotevoTrait(sim, traitID = "beta", returnData = F)
 
 <!-- The biomass per trait value of one species through time -->
 
-```{r Default sim phenotypique diversity, echo = F, eval = F}
+```{r Default_sim_phenotypique_diversity, echo = F, eval = F}
 
 myDat <- readRDS("~/predationChapter/romainZone/completeBiomData.rds")
 jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")) # colorful gradient
@@ -271,7 +271,7 @@ p4
 
 
 
-```{r trait through time, echo = F, eval = F}
+```{r trait_through_time, echo = F, eval = F}
 
 ## Pannel b) - Trait variation with predation ==============
 colfunc <- colorRampPalette(c("firebrick3","darkturquoise", "orange"))
@@ -442,7 +442,7 @@ p1
 <!-- When two traits are involved -->
 
 
-```{r fitness 2 traits, echo = F, eval = F}
+```{r fitness2_traits, echo = F, eval = F}
 
 KKNNIn <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/initAdd/KKNN.rds")
 KKNNGW <- readRDS("/rd/gem/private/users/romainf/mizerEvoMerging/simulations/old/GW/backup/KKNN.rds")
@@ -495,7 +495,7 @@ p1
 <!-- Checking the average number of phenotypes per species through time. -->
 
 
-```{r number of phenotypes, echo = F, eval = F}
+```{r number_of_phenotypes, echo = F, eval = F}
 
 plot_datPred <- readRDS(file = "~/mizerFIE/romainZone/PhenDataPred.rds")
 plot_datPred <- plot_datPred[[1]]
@@ -550,7 +550,7 @@ p
 
 Instead of generating phenotypic diversity within existing species, the model can instead introduce mutants in an existing ecosystem. One just needs to give a data frame to the mutation argument instead of a numeric.
 
-```{r species invasion}
+```{r species_invasion}
 
 params<- evoParams()
 
@@ -571,8 +571,15 @@ plotDynamics(sim)
 
 
 
+Randomly introducing alien species 
 
 
+```{r}
+params <- evoParams()
+
+sim <- evoProject(params = params, mutation = 0, alien = 3)
+
+```
 
 
 

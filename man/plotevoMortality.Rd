@@ -12,6 +12,18 @@ plotevoMortality(
   comments = T
 )
 }
+\arguments{
+\item{object}{An object of class \linkS4class{MizerSim}}
+
+\item{time_range}{The time range (either a vector of values, a vector of min
+and max time, or a single value) to average the abundances over. Default is
+the final time step.}
+
+\item{print_it}{A boolean value that displays comments. Default is TRUE}
+
+\item{returnData}{A boolean value that controls the output. Either a dataframe
+ready for ggplot (TRUE) or the plot itself (FALSE). Default is FALSE}
+}
 \value{
 A plot
 }

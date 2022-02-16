@@ -139,6 +139,14 @@ present in the same size range.}
 \item{perfect_scaling}{If TRUE then parameters are set so that the community
 abundance, growth before reproduction and death are perfect power laws. In
 particular all other scaling corrections are turned on.}
+
+\item{specificParams}{...}
+
+\item{interactionMatrix}{...}
+
+\item{ea_int}{...}
+
+\item{ca_int}{...}
 }
 \value{
 An object of type \code{MizerParams}

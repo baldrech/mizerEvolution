@@ -15,9 +15,35 @@ plotSS(
   community = FALSE,
   save_it = FALSE,
   nameSave = "SizeSpectrum.png",
-  returnData = FALSE,
-  ...
+  returnData = FALSE
 )
+}
+\arguments{
+\item{object}{An object of class \linkS4class{MizerSim}}
+
+\item{time_range}{The time range (either a vector of values, a vector of min
+and max time, or a single value) to average the abundances over. Default is
+the final time step.}
+
+\item{min_w}{...}
+
+\item{ylim}{...}
+
+\item{biomass}{...}
+
+\item{print_it}{A boolean value that displays comments. Default is TRUE}
+
+\item{species}{Plot only a specific species and its phenotypes
+Default is NULL}
+
+\item{community}{...}
+
+\item{save_it}{...}
+
+\item{nameSave}{...}
+
+\item{returnData}{A boolean value that controls the output. Either a dataframe
+ready for ggplot (TRUE) or the plot itself (FALSE). Default is FALSE}
 }
 \value{
 A plot

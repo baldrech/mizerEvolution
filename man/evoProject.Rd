@@ -19,13 +19,27 @@ evoProject(
 )
 }
 \arguments{
+\item{initCondition}{...}
+
 \item{params}{...}
 
 \item{t_max}{...}
 
+\item{dt}{...}
+
 \item{mutation}{...}
 
+\item{trait}{...}
+
+\item{initPool}{...}
+
+\item{initSpread}{...}
+
+\item{alien}{...}
+
 \item{saveFolder}{...}
+
+\item{effort}{...}
 }
 \value{
 ...

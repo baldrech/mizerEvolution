@@ -13,7 +13,10 @@
 #' @importFrom stats pnorm runif time
 #' @importFrom methods is
 #' @importFrom grDevices colorRampPalette
+#' @importFrom plyr aaply
 #' @export
 reshape2::melt
 
 "_PACKAGE"
+
+globalVariables(c("inter","value","sp","phen","Species","species","xint","grp","lineage","size","critical"))

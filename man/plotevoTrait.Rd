@@ -12,6 +12,14 @@ plotevoTrait(
   traitID = NULL
 )
 }
+\arguments{
+\item{object}{An object of class \linkS4class{MizerSim}}
+
+\item{SpIdx}{Display a subset of species}
+
+\item{returnData}{A boolean value that controls the output. Either a dataframe
+ready for ggplot (TRUE) or the plot itself (FALSE). Default is FALSE}
+}
 \value{
 A plot
 }

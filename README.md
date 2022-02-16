@@ -105,7 +105,7 @@ plots into one:
 plot(sim)
 ```
 
-![](man/figures/diagnostic%20plot-1.png)<!-- -->
+![](man/figures/diagnostic_plot-1.png)<!-- -->
 
 In this default Mizer plot, added phenotypes are considered as new
 species.
@@ -171,7 +171,7 @@ thorugh time) if the phenotype argument is set to FALSE
 plotDynamics(sim, phenotype = F)
 ```
 
-![](man/figures/plotDynamics%201-1.png)<!-- -->
+![](man/figures/plotDynamics1-1.png)<!-- -->
 
 Showing the phenotypes as semi-transparent lines, with phenotype = TRUE
 (default)
@@ -180,7 +180,7 @@ Showing the phenotypes as semi-transparent lines, with phenotype = TRUE
 plotDynamics(sim, phenotype = T)
 ```
 
-![](man/figures/plotDynamics%202-1.png)<!-- -->
+![](man/figures/plotDynamics2-1.png)<!-- -->
 
 The species argument displays all the phenotypes of one species only
 (take species identity as value)
@@ -189,7 +189,7 @@ The species argument displays all the phenotypes of one species only
 plotDynamics(sim,species = 2)
 ```
 
-![](man/figures/plotDynamics%203-1.png)<!-- -->
+![](man/figures/plotDynamics3-1.png)<!-- -->
 
 The trait value of the phenotypes can be displayed per phenotypes as a
 continuous gradient, only available when only one species is selected
@@ -198,7 +198,7 @@ continuous gradient, only available when only one species is selected
 plotDynamics(sim, species = 2, trait = sim@params@species_params$beta)
 ```
 
-![](man/figures/plotDynamics%204-1.png)<!-- -->
+![](man/figures/plotDynamics4-1.png)<!-- -->
 
 The SpIdx argument selects for a subset of species
 
@@ -206,7 +206,7 @@ The SpIdx argument selects for a subset of species
 plotDynamics(sim,SpIdx = c(1,2,3))
 ```
 
-![](man/figures/plotDynamics%205-1.png)<!-- -->
+![](man/figures/plotDynamics5-1.png)<!-- -->
 
 ### plotSS
 
@@ -308,4 +308,4 @@ sim <- evoProject(params = params, alien = alien, mutation = 0)
 plotDynamics(sim)
 ```
 
-![](man/figures/species%20invasion-1.png)<!-- -->
+![](man/figures/species_invasion-1.png)<!-- -->

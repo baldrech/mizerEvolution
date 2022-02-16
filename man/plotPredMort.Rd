@@ -4,7 +4,19 @@
 \alias{plotPredMort}
 \title{Plot predation mortality rate of each species against size}
 \usage{
-plotPredMort(object, species = NULL, time_range, highlight = NULL, ...)
+plotPredMort(object, species = NULL, time_range, highlight = NULL)
+}
+\arguments{
+\item{object}{An object of class \linkS4class{MizerSim}}
+
+\item{species}{Plot only a specific species and its phenotypes
+Default is NULL}
+
+\item{time_range}{The time range (either a vector of values, a vector of min
+and max time, or a single value) to average the abundances over. Default is
+the final time step.}
+
+\item{highlight}{...}
 }
 \value{
 A plot

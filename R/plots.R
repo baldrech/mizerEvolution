@@ -16,8 +16,8 @@
 #' @param print_it A boolean value that displays comments. Default is TRUE
 #' @param returnData A boolean value that controls the output. Either a dataframe
 #' ready for ggplot (TRUE) or the plot itself (FALSE). Default is FALSE
-#' @param save_it
-#' @param nameSave
+#' @param save_it ...
+#' @param nameSave ...
 #' @param ylimit To edit the y axis scale on the plot
 #'
 #' @return A plot
@@ -65,7 +65,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
 
     plotBiom <- function(x)
     {
-        Biom <- melt(x) # melt for ggplot
+        Biom <- reshape2::melt(x) # melt for ggplot
         colnames(Biom) = c("time","phen","value")
         # create a species column
         Biom$sp = sapply(Biom$phen, function(x) object@params@species_params$lineage[x])
@@ -156,6 +156,10 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
 #' @description
 #'
 #' @inheritParams plotDynamics
+#' @param min_w ...
+#' @param ylim ...
+#' @param biomass ...
+#' @param community ...
 #' @return A plot
 #' @export
 #' @family plotting functions
@@ -165,7 +169,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
 #' }
 
 plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), min_w =min(object@params@w)/100, ylim = c(NA,NA),
-                   biomass = TRUE, print_it = TRUE, species = TRUE, community = FALSE, save_it = FALSE, nameSave = "SizeSpectrum.png", returnData = FALSE, ...){
+                   biomass = TRUE, print_it = TRUE, species = TRUE, community = FALSE, save_it = FALSE, nameSave = "SizeSpectrum.png", returnData = FALSE){
 
     cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
     # min_w = 0.001
@@ -281,71 +285,73 @@ plotSS <- function(object, time_range = max(as.numeric(dimnames(object@n)$time))
 #' \donttest{
 #' }
 
-plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, throughTime = F, start = 1000, every = 1000,
+plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, start = 1000, every = 1000,
                            print_it = T, returnData = F, save_it =F, nameSave = "Feeding.png"){
 
 
-    cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
+    # cbPalette <- c("#999999","#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #9 colors for colorblind
 
-    if (throughTime)
-    {
-        time_range = seq(start,max(as.numeric(dimnames(object@n)$time)),every)
-        time_range = c(time_range,max(as.numeric(dimnames(object@n)$time))) # so it counts the last time step which is probably not even
-        time_range = unique(time_range)
-        feeding = array(data = NA, dim = c(length(unique(object@params@species_params$species)),100,length(time_range)),
-                        dimnames = list(as.character(unique(object@params@species_params$species)),object@params@w,time_range))
-        Critfeeding = matrix(data=NA, nrow = length(time_range), ncol= 100, dimnames = list(time_range,object@params@w))
-        for (i in time_range)
-        {
-
-            feed_time <- getFeedingLevel(object=object, time_range=i, drop=FALSE)#, ...) # get the feeding time
-            feed <- apply(feed_time, c(2,3), mean) # average on the time frame
-
-            Cfeed_time <- getCriticalFeedingLevel(object=object, time_range=i, drop=FALSE)#, ...) # get the critical feeding level
-            Critfeed <- apply(Cfeed_time, c(2,3), mean) # average on the time frame
-            Critfeed <- Critfeed[1,] # all rows the same
-
-            dimnames(feed)$sp = object@params@species_params$species
-            SpIdx = unique(object@params@species_params$species) # get the species names
-            feed_sp = matrix(data = NA, ncol = dim(feed)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(feed)$w)) # prepare the new object
-            names(dimnames(feed_sp))=list("species","size")
-
-            for (j in SpIdx)
-            {
-                temp = feed # save to manip
-                temp[which(rownames(feed) != j), ] = 0 # keep the ecotypes from the species only
-                temp = apply(temp, 2, sum)
-                temp = temp / length(which(rownames(feed)==j)) # do the mean (in 2 steps)
-                feed_sp[which(rownames(feed_sp)==j), ] = temp
-            }
-            feeding[,,which(dimnames(feeding)[[3]] == i)] = feed_sp
-            Critfeeding[which(dimnames(Critfeeding)[[1]] == i),] = Critfeed
-        }
-        a <- c(object@params@species_params$w_inf[SpIdx]) # to get vline of different col, need to create a data frame
-        vlines <- data.frame(xint = a,grp = SpIdx)
-
-        plot_dat = melt(feeding)
-        colnames(plot_dat) = c("species","size","time","value")
-        plot_crit = melt(Critfeeding)
-        colnames(plot_crit) = c("time","size","value")
-        p <- ggplot(plot_dat) +
-            geom_line(aes(x=size, y = value, colour = as.factor(species))) +
-            geom_line(data = plot_crit, aes(x = size, y = value), linetype = "dashed") +
-            scale_x_log10(name = "Size") +
-            scale_y_continuous(name = "Feeding Level", lim=c(0,1))+
-            geom_vline(data = vlines,aes(xintercept = xint,colour = as.factor(grp)), linetype = "dashed") +
-            facet_grid(time ~ .)+
-            scale_colour_manual(values=cbPalette, name = "Species")+ # colorblind
-            theme(panel.background = element_rect(fill = "white", color = "black"),
-                  panel.grid.minor = element_line(colour = "grey92"))+
-
-            ggtitle("Feeding level through time")
-
-        if(save_it) ggsave(plot = p, filename = nameSave, scale = 1.5)
-
-        if (returnData) return(list(plot_dat,plot_crit)) else if(print_it) return(p)
-
-    }
+    # if (throughTime)
+    # {
+    #     time_range = seq(start,max(as.numeric(dimnames(object@n)$time)),every)
+    #     time_range = c(time_range,max(as.numeric(dimnames(object@n)$time))) # so it counts the last time step which is probably not even
+    #     time_range = unique(time_range)
+    #     feeding = array(data = NA, dim = c(length(unique(object@params@species_params$species)),100,length(time_range)),
+    #                     dimnames = list(as.character(unique(object@params@species_params$species)),object@params@w,time_range))
+    #     Critfeeding = matrix(data=NA, nrow = length(time_range), ncol= 100, dimnames = list(time_range,object@params@w))
+    #     for (i in time_range)
+    #     {
+    #
+    #         feed_time <- getFeedingLevel(object=object, time_range=i, drop=FALSE)#, ...) # get the feeding time
+    #         feed <- apply(feed_time, c(2,3), mean) # average on the time frame
+    #
+    #         Cfeed_time <- getCriticalFeedingLevel(object=object, time_range=i, drop=FALSE)#, ...) # get the critical feeding level
+    #         Critfeed <- apply(Cfeed_time, c(2,3), mean) # average on the time frame
+    #         Critfeed <- Critfeed[1,] # all rows the same
+    #
+    #         dimnames(feed)$sp = object@params@species_params$species
+    #         SpIdx = unique(object@params@species_params$species) # get the species names
+    #         feed_sp = matrix(data = NA, ncol = dim(feed)[2], nrow = length(SpIdx), dimnames = list(SpIdx,dimnames(feed)$w)) # prepare the new object
+    #         names(dimnames(feed_sp))=list("species","size")
+    #
+    #         for (j in SpIdx)
+    #         {
+    #             temp = feed # save to manip
+    #             temp[which(rownames(feed) != j), ] = 0 # keep the ecotypes from the species only
+    #             temp = apply(temp, 2, sum)
+    #             temp = temp / length(which(rownames(feed)==j)) # do the mean (in 2 steps)
+    #             feed_sp[which(rownames(feed_sp)==j), ] = temp
+    #         }
+    #         feeding[,,which(dimnames(feeding)[[3]] == i)] = feed_sp
+    #         Critfeeding[which(dimnames(Critfeeding)[[1]] == i),] = Critfeed
+    #     }
+    #     a <- c(object@params@species_params$w_inf[SpIdx]) # to get vline of different col, need to create a data frame
+    #     vlines <- data.frame(xint = a,grp = SpIdx)
+    #
+    #     color_legend <- object@params@linecolour[SpIdx]
+    #
+    #     plot_dat = melt(feeding)
+    #     colnames(plot_dat) = c("species","size","time","value")
+    #     plot_crit = melt(Critfeeding)
+    #     colnames(plot_crit) = c("time","size","value")
+    #     p <- ggplot(plot_dat) +
+    #         geom_line(aes(x=size, y = value, colour = as.factor(species))) +
+    #         geom_line(data = plot_crit, aes(x = size, y = value), linetype = "dashed") +
+    #         scale_x_log10(name = "Size") +
+    #         scale_y_continuous(name = "Feeding Level", limits = c(0,1))+
+    #         geom_vline(data = vlines,aes(xintercept = xint,colour = as.factor(grp)), linetype = "dashed") +
+    #         facet_grid(time ~ .)+
+    #         scale_colour_manual(values= color_legend, name = "Species")+ # colorblind
+    #         theme(panel.background = element_rect(fill = "white", color = "black"),
+    #               panel.grid.minor = element_line(colour = "grey92"))+
+    #
+    #         ggtitle("Feeding level through time")
+    #
+    #     if(save_it) ggsave(plot = p, filename = nameSave, scale = 1.5)
+    #
+    #     if (returnData) return(list(plot_dat,plot_crit)) else if(print_it) return(p)
+    #
+    # }
 
     feed_time <- getFeedingLevel(object=object, time_range=time_range, drop=FALSE) #, ...) # get the feeding time
     feed <- apply(feed_time, c(2,3), mean) # average on the time frame
@@ -387,6 +393,7 @@ plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n
 
     a <- c(object@params@species_params$w_inf[SpIdx]) # to get vline of different col, need to create a data frame
     vlines <- data.frame(xint = a,grp = SpIdx)
+    color_legend <- object@params@linecolour[SpIdx]
 
     plot_dat <- data.frame(value = c(feed),critical = c(Cfeed), species = as.factor(dimnames(feed)[[1]]), size = rep(object@params@w, each=length(dimnames(feed)[[1]])))
 
@@ -395,8 +402,8 @@ plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n
         geom_line(aes(x=size, y = critical), linetype = "dashed", color = "red") +
         geom_vline(data = vlines,aes(xintercept = xint,colour = as.factor(grp)), linetype = "dashed") +
         scale_x_log10(name = "Size", breaks = c(1 %o% 10^(-3:5)))  +
-        scale_y_continuous(name = "Feeding Level", lim=c(0,1))+
-        scale_colour_manual(values=cbPalette, name = "Species")+ # colorblind
+        scale_y_continuous(name = "Feeding Level", limits = c(0,1))+
+        scale_colour_manual(values=color_legend, name = "Species")+ # colorblind
         theme(panel.background = element_rect(fill = "white", color = "black"),
               panel.grid.minor = element_line(colour = "grey92"),
               legend.key = element_rect(fill = "white"))+
@@ -404,7 +411,7 @@ plotevoFeeding <- function(object, time_range = max(as.numeric(dimnames(object@n
 
     if(save_it) ggsave(plot = p, filename = nameSave,width = 18, height = 18, units = "cm" )
 
-    if (returnData) return(list(plot_dat,Critfeed)) else if(print_it) return(p)
+    if (returnData) return(plot_dat) else if(print_it) return(p)
 }
 
 
@@ -499,7 +506,7 @@ plotStarvation <- function(object, time_range = max(as.numeric(dimnames(object@n
 
 
     time_elements <- get_time_elements(object,time_range)
-    death_time <- aaply(which(time_elements), 1, function(x){
+    death_time <- plyr::aaply(which(time_elements), 1, function(x){
         # Necessary as we only want single time step but may only have 1 species which makes using drop impossible
 
         n <- array(object@n[x,,],dim=dim(object@n)[2:3])
@@ -607,7 +614,7 @@ plotevoMortality <- function(object, time_range = max(as.numeric(dimnames(object
     p <- ggplot(plot_dat) +
         geom_line(aes(x=w, y = value, colour = Species)) +
         scale_x_continuous(name = "Size", trans="log10", breaks = c(1 %o% 10^(-3:5))) +
-        scale_y_continuous(name = "Mortality", lim=c(0,max(plot_dat$value))) +
+        scale_y_continuous(name = "Mortality", limits = c(0,max(plot_dat$value))) +
         theme(legend.key = element_rect(fill = "white"),
               panel.background = element_rect(fill = "white", color = "black"),
               panel.grid.minor = element_line(colour = "grey92"))+
@@ -635,7 +642,7 @@ plotSpawn <- function(object, time_range = max(as.numeric(dimnames(object@n)$tim
                       nameSave = "Spawn.png",...){
 
     time_elements <- get_time_elements(object,time_range)
-    spawn_time <- aaply(which(time_elements), 1, function(x){
+    spawn_time <- plyr::aaply(which(time_elements), 1, function(x){
         # Necessary as we only want single time step but may only have 1 species which makes using drop impossible
 
         n <- array(object@n[x,,],dim=dim(object@n)[2:3])
@@ -693,6 +700,7 @@ plotSpawn <- function(object, time_range = max(as.numeric(dimnames(object@n)$tim
 #' @description
 #'
 #' @inheritParams plotDynamics
+#' @param ylim ...
 #' @return A plot
 #' @export
 #' @family plotting functions
@@ -702,11 +710,11 @@ plotSpawn <- function(object, time_range = max(as.numeric(dimnames(object@n)$tim
 #' }
 
 plotPredRate <- function(object, time_range = max(as.numeric(dimnames(object@n)$time)), species = T, ylim = c(NA,NA),
-                         print_it = T, returnData = F, save_it = F, nameSave = "PredRate.png",...){
+                         print_it = T, returnData = F, save_it = F, nameSave = "PredRate.png"){
 
     time_range = max(as.numeric(dimnames(object@n)$time))
     time_elements <- get_time_elements(object,time_range)
-    spawn_time <- aaply(which(time_elements), 1, function(x){
+    spawn_time <- plyr::aaply(which(time_elements), 1, function(x){
         # Necessary as we only want single time step but may only have 1 species which makes using drop impossible
 
         n <- array(object@n[x,,],dim=dim(object@n)[2:3])
@@ -767,6 +775,7 @@ plotPredRate <- function(object, time_range = max(as.numeric(dimnames(object@n)$
 #'
 #'
 #' @inheritParams plotDynamics
+#' @param highlight ...
 #' @return A plot
 #' @export
 #' @family plotting functions
@@ -780,7 +789,7 @@ plotPredRate <- function(object, time_range = max(as.numeric(dimnames(object@n)$
 #' }
 plotPredMort <- function(object, species = NULL,
                          time_range,
-                         highlight = NULL, ...) {
+                         highlight = NULL) {
     if (is(object, "MizerSim")) {
         if (missing(time_range)) {
             time_range  <- max(as.numeric(dimnames(object@n)$time))
