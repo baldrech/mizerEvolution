@@ -4,15 +4,12 @@ author: "RF"
 ---
 
 
-TODO
 
-plotevotrait outputs an empty list with the plot
-
-plotDynamics has an error more than 9 species have to been plotted (not enough colors) need to do a case about that
 
 ```{r}
 library(ggplot2)
 library(dplyr)
+library(mizerEvolution)
 ```
 
 
@@ -25,13 +22,35 @@ sim <- project(params)
 
 plotBiomass(sim)
 
-plotDiet(sim@params, species = "11")
+plotDiet(sim@params, species = "5")
 
 simEvo <- evoProject(params = params, t_max = 200, mutation = 3, trait = "beta")
 
 plotDynamics(simEvo)
 
 plotevoTrait(simEvo, traitID = "beta", returnData = F)
+
+```
+
+
+### Notes
+
+for creating new traits, the specific cases are not working. for now any trait in species_params can be randomly changed but it doesnt change any calculations around the parameter / trait
+need to rewrite the cases to remove all the useless stuff
+
+getSMort to calculate starvation is missing, check mizer or some old files. Maybe mizer does it better anyway
+
+not sure feeding level through time works well, probably useless anyway, need to remove it
+
+
+
+## invasions
+
+```{r}
+
+params <- evoParams(no_sp =  5)
+
+simEvo <- evoProject(params = params, t_max = 100, alien = 3, mutation = 0)
 
 ```
 
