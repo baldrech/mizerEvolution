@@ -580,7 +580,7 @@ params <- evoParams()
 sim <- evoProject(params = params, mutation = 0, alien = 3, alien_init_n = NULL)
 
 plotDynamics(sim)
-plotSS(sim)
+# plotSS(sim)
 
 ```
 
