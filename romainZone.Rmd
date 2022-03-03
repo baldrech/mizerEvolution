@@ -42,7 +42,12 @@ getSMort to calculate starvation is missing, check mizer or some old files. Mayb
 
 not sure feeding level through time works well, probably useless anyway, need to remove it
 
+# todo
 
+
+improve readme invasion section
+
+function update evo so can convert NS params and play with it
 
 ## invasions
 

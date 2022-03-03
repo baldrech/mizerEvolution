@@ -63,25 +63,27 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
     spSub <- object@params@species_params$species[object@params@species_params$lineage %in% SpIdx]
     biomass <- biomass[,as.numeric(dimnames(biomass)$sp) %in% spSub]
 
-    plotBiom <- function(x)
+    plotBiom <- function(x,params)
     {
         Biom <- reshape2::melt(x) # melt for ggplot
         colnames(Biom) = c("time","phen","value")
         # create a species column
-        Biom$sp = sapply(Biom$phen, function(x) object@params@species_params$lineage[x])
+        if(is.null(params@species_params$name))
+            Biom$sp = sapply(Biom$phen, function(x) object@params@species_params$lineage[x]) else
+                Biom$sp = sapply(Biom$phen, function(x) object@params@species_params$name[x])
         return(Biom)
     }
-    BiomSp <- plotBiom(biomassSp)
+    BiomSp <- plotBiom(biomassSp, object@params)
     BiomSp <- BiomSp[BiomSp$value >= min_value,]
 
 
     color_legend <- object@params@linecolour[SpIdx]
+    if(!is.null(object@params@species_params$name)) names(color_legend) <- object@params@species_params$name[as.numeric(SpIdx)]
 
     if (phenotype) # are we displaying the phenotypes or just species total?
     {
-
-        BiomPhen <- plotBiom(biomass)
-        BiomPhen <- plotBiom(biomass)
+        BiomPhen <- plotBiom(biomass, object@params)
+        # BiomPhen <- plotBiom(biomass)
         if(!is.null(trait))
             BiomPhen$trait <- rep(trait, each = length(unique(BiomPhen$time)))
         BiomPhen <- BiomPhen[BiomPhen$value >= min_value,]
@@ -89,7 +91,7 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
         p <- ggplot(BiomSp) +
             geom_line(aes(x = time, y = value, colour = as.factor(sp), group = sp), size = 1.2) +
             geom_line(data = BiomPhen, aes(x = time, y = value, colour = as.factor(sp), group = phen), alpha = 0.2) +
-            scale_y_log10(name = "Biomass in g.m^-3", limits = ylimit, breaks = c(1 %o% 10^(seq(-30,4,2)))) +
+            scale_y_log10(name = "Biomass in g.m^-3", limits = ylimit, breaks = c(1 %o% 10^(seq(-30,10,2)))) +
             scale_x_continuous(name = "Time in years") +
             labs(color='Species') +
             theme(panel.background = element_rect(fill = "white", color = "black"),
@@ -97,7 +99,6 @@ plotDynamics <- function(object,  phenotype = TRUE, species = NULL, trait = NULL
                   legend.key = element_rect(fill = "white"))+
             scale_colour_manual(values=color_legend)+
             ggtitle("Community biomass")
-
 
         if (!is.null(species)) # Are we looking at one species in particular or all of them? Note: need to select only one species if we want to look at traits
         {

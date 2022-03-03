@@ -66,8 +66,7 @@
 #' @param perfect_scaling If TRUE then parameters are set so that the community
 #'   abundance, growth before reproduction and death are perfect power laws. In
 #'   particular all other scaling corrections are turned on.
-#' @param specificParams ...
-#' @param interactionMatrix ...
+#' @param updateParams ...
 #' @param ea_int ...
 #' @param ca_int ...
 #' @export
@@ -111,14 +110,14 @@ evoParams <- function(no_sp = 11,
                       egg_size_scaling = FALSE,
                       resource_scaling = FALSE,
                       perfect_scaling = FALSE,
-                      specificParams = NULL,
-                      interactionMatrix = NULL,
+                      updateParams = NULL,
+                      # interactionMatrix = NULL,
                       ea_int = 0, # temperature parameters
                       ca_int = 0
 ) {
 
 
-  if(is.null(specificParams))
+  if(is.null(updateParams))
   {
     params <- newTraitParams(
       no_sp = no_sp,
@@ -159,26 +158,38 @@ evoParams <- function(no_sp = 11,
 
   } else {
     # if the species column has characters instead of numeric it becomes annoying
-    speciesName <- specificParams$species
-    specificParams$species <- as.factor(1:dim(specificParams)[1])
+    new_sp_params <- updateParams@species_params
+    speciesName <- new_sp_params$species
+    new_sp_params$species <- as.factor(1:dim(new_sp_params)[1])
 
-    params <- newMultispeciesParams(specificParams)
+    params <- newMultispeciesParams(new_sp_params, interaction = updateParams@interaction, min_w_pp = updateParams@w_full[1])
+    params <- setResource(params, r_pp = updateParams@resource_params$r_pp,
+                kappa = updateParams@resource_params$kappa,
+                lambda = updateParams@resource_params$lambda,
+                n = updateParams@resource_params$n,
+                w_pp_cutoff = updateParams@resource_params$w_pp_cutoff)
+    # setPredKernel(params, pred_kernel = getPredKernel(updateParams))
+
     params@gear_params$species <- as.factor(params@gear_params$species) # for some reason the function above gives species as char
     params@species_params$lineage <- as.factor(1:dim(params@species_params)[1]) # parameter to remember the origin species of the phenotypes
     params@species_params$name <- speciesName
 
 
-    if(!is.null(interactionMatrix))
-    {
-      dimnames(interactionMatrix) <- list(as.factor(1:dim(inter)[1]),as.factor(1:dim(inter)[2]))
-      params <- setInteraction(params, interaction = interactionMatrix)
-    }
+  #   if(!is.null(interactionMatrix))
+  #   {
+  #     dimnames(interactionMatrix) <- list(as.factor(1:dim(inter)[1]),as.factor(1:dim(inter)[2]))
+  #     params <- setInteraction(params, interaction = interactionMatrix)
+  #   }
   }
 
   params@species_params$zeta <- zeta # amplitude of lognorm distribution around trait when generating new phenotype
   params@species_params$pop <- 1 # when does the phenotype entered the simulation
   params@species_params$ext <- F # when does the phenotype left the simulation
   params <- setReproduction(params, RDD = RDD)
+
+  # temperature parameters
+  params@species_params$ea_int <- ea_int
+  params@species_params$ca_int <- ca_int
 
   return(params)
 }
@@ -269,6 +280,7 @@ finalTouch <- function(saveFolder,params,t_max)
 #' @param initPool ...
 #' @param initSpread ...
 #' @param alien ...
+#' @param alien_init_n ...
 #' @param saveFolder ...
 #' @param effort ...
 #' @return ...
@@ -284,6 +296,7 @@ finalTouch <- function(saveFolder,params,t_max)
 #' }
 evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1, # params and initCondition cannot be both null at same time, need to specify that
                        mutation = 2, trait = "w_mat", initPool = 0, initSpread = 5, alien = 0,
+                       alien_init_n = NULL,
                        saveFolder = file.path(tempdir(), "simTemp"), effort = 0)
 {
 
@@ -576,7 +589,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
 
           n_newSp <- rep(0,dim(mySim@n)[3])
           #need to create size spectrum of abundance from one value
-          n0_mult = 10 # (boost the initial abundance) | apparently the initial biomass of the invading species are really low
+          n0_mult = alien_init_n # (boost the initial abundance) | apparently the initial biomass of the invading species are really low
           a = 0.35
           no_w <- length(mySim@params@w)
           initial_n <- array(NA, dim = c(1, no_w))
@@ -865,6 +878,11 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
   }
   return(mySim) # no mutation, just normal run
 }
+
+
+
+
+
 
 addSpecies <- function(params, species_params, interaction, defaultInteraction = 1, init_n) {
   # check validity of parameters ----

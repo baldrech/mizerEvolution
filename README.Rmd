@@ -571,16 +571,58 @@ plotDynamics(sim)
 
 
 
-Randomly introducing alien species 
+Randomly introducing alien species. By giving an integer to the `alien` argument, this will become a rate per thousand of invation rate. The `alien_n_init` controls the initial level of abundance when introducing an invasive species. It is a multiplier of the inital abundance calculated to create a size spectrum. Default is set to `NULL`, making it `kappa/1000`.
 
 
 ```{r}
 params <- evoParams()
 
-sim <- evoProject(params = params, mutation = 0, alien = 3)
+sim <- evoProject(params = params, mutation = 0, alien = 3, alien_init_n = NULL)
+
+plotDynamics(sim)
+plotSS(sim)
 
 ```
 
+
+# Updating existing params
+
+
+The argument `updateParams` in `evoParams` updates an existing `mizerParams` object into a `mizerEvolution` compatible object. 
+
+```{r}
+newP <- evoParams(updateParams = NS_params)
+
+sim <- evoProject(params = newP, mutation = 1, trait = "beta")
+
+plotDynamics(sim)
+```
+
+
+There are no differences if `mutation` is set to 0
+
+
+
+```{r}
+old_sim <- project(NS_params)
+
+sim <- evoProject(params = newP, mutation = 0)
+
+plotDynamics(sim)
+
+plotBiomass(old_sim)
+```
+
+
+Invasions work too
+
+
+```{r}
+sim_inv <- evoProject(params = newP, mutation = 0, alien =2)
+
+plotDynamics(sim_inv)
+
+```
 
 
 
