@@ -14,6 +14,8 @@ evoProject(
   initPool = 0,
   initSpread = 5,
   alien = 0,
+  alien_init_n = NULL,
+  trait_range = NULL,
   saveFolder = file.path(tempdir(), "simTemp"),
   effort = 0
 )
@@ -36,6 +38,8 @@ evoProject(
 \item{initSpread}{...}
 
 \item{alien}{...}
+
+\item{alien_init_n}{...}
 
 \item{saveFolder}{...}
 

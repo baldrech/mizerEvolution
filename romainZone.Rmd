@@ -42,12 +42,6 @@ getSMort to calculate starvation is missing, check mizer or some old files. Mayb
 
 not sure feeding level through time works well, probably useless anyway, need to remove it
 
-# todo
-
-
-improve readme invasion section
-
-function update evo so can convert NS params and play with it
 
 ## invasions
 
@@ -58,4 +52,131 @@ params <- evoParams(no_sp =  5)
 simEvo <- evoProject(params = params, t_max = 100, alien = 3, mutation = 0)
 
 ```
+
+
+Adding a dataframe containing the trait range for invasions. For now the df is going to be flying around but it would be good if I could add it to the mizerParams object
+
+
+
+```{r}
+
+
+# using the median from NS to fill df
+
+small_beta <- NS_params@species_params$beta[-c(1,2,4)]
+big_beta <- NS_params@species_params$beta[c(1,2,4)]
+w_inf_fit <- MASS::fitdistr(NS_params@species_params$w_inf,"lognormal")
+beta_fit1 <- MASS::fitdistr(small_beta,"normal") # maybe beta is not the best fit for beta, need a u shaped function, I don't like the logistic either, trying sum of 2 normal
+beta_fit2 <- MASS::fitdistr(big_beta,"normal") 
+sigma_fit <- MASS::fitdistr(NS_params@species_params$sigma,"normal")
+k_vb_fit <- MASS::fitdistr(NS_params@species_params$k_vb,"normal")
+ks_fit <- MASS::fitdistr(NS_params@species_params$ks,"normal")
+eta_fit <- MASS::fitdistr(NS_params@species_params$w_mat/NS_params@species_params$w_inf,"normal")
+
+# sample new trait values from these fits
+fit_winf <- rlnorm(x, w_inf_fit$estimate['meanlog'], w_inf_fit$estimate['sdlog'])
+
+fit_beta1 <- rnorm(x, beta_fit1$estimate['mean'], beta_fit1$estimate['sd'])
+fit_beta1[fit_beta1<0] <- NA
+fit_beta2 <- rnorm(x, beta_fit2$estimate['mean'], beta_fit2$estimate['sd'])
+fit_beta2[fit_beta2<0] <- NA
+fit_beta <- c(fit_beta1, fit_beta2)
+
+fit_sigma <- rnorm(x, sigma_fit$estimate['mean'], sigma_fit$estimate['sd'])
+
+fit_kvb <- rnorm(x, k_vb_fit$estimate['mean'], k_vb_fit$estimate['sd'])
+
+fit_ks <- rnorm(x, ks_fit$estimate['mean'], ks_fit$estimate['sd'])
+
+fit_plot <- data.frame(x = fit_ks) #
+
+
+# they all look fine now
+ggplot(fit_plot) +
+    geom_density(aes(x =x )) 
+    # geom_histogram(aes(x=x))
+    # scale_x_continuous(trans = "log10")
+    # geom_density(data = test, aes(x = y))
+
+
+# default dataframe
+
+trait_range <- data.frame("trait" = c("w_inf", "betaS","betaL", "sigma", "k_vb", "ks","eta"),
+                          "distribution" = c("lnorm","norm", "norm","norm","norm","norm","norm"),
+                          "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530), # values extracted from NS_params
+                          "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
+
+
+# creating an invader from this
+
+alien_synthesis <- function(trait_range, n = 1){
+    
+    if(is.null(trait_range)) # using NS_params
+    {
+        trait_range <- data.frame("trait" = c("w_inf", "betaS","betaL", "sigma", "k_vb", "ks","eta"),
+                          "distribution" = c("lnorm","norm", "norm","norm","norm","norm","norm"),
+                          "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530),
+                          "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
+    }
+    
+    for(iAlien in 1:n) # for n number of alien
+    {
+        # for(iRow in dim(trait_range)[1]) # go through each row of the trait df
+        # {
+        # hard to make it user fool proof so going to focus on default df for now
+        
+        w_inf <- sigma <- k_vb <- ks <- eta <- beta <- -1 # initialisation for while loop
+        
+        while(w_inf <0) w_inf <- rlnorm(1, trait_range$mean[1], trait_range$sd[1])
+        while(sigma <0)    sigma <- rnorm(1, trait_range$mean[4], trait_range$sd[4])
+        while(k_vb <0)    k_vb <- rnorm(1, trait_range$mean[5], trait_range$sd[5])
+        while(ks <0)    ks <- rnorm(1, trait_range$mean[6], trait_range$sd[6])
+        while(eta <0.027)    eta <- rnorm(1, trait_range$mean[7], trait_range$sd[7]) # eta can get really small in NS_params, just making a threshold at the min value of the ecosystem
+        while(beta <0)
+        {
+            betaS <- rnorm(1, trait_range$mean[2], trait_range$sd[2])
+            betaL <- rnorm(1, trait_range$mean[3], trait_range$sd[3])
+            beta <- sample(c(betaS,betaL),1)
+        }
+        w_mat <- w_inf * eta
+        
+        species_df <- data.frame(
+            "w_inf" = w_inf,
+            "w_mat" = w_mat,
+            "beta" = beta,
+            "sigma" = sigma,
+            "k_vb" = k_vb,
+            "ks" = ks)
+    }
+    return(species_df)
+   }
+
+        
+    
+    
+
+
+
+
+# tests
+
+x <- 1:1000
+y <- rnorm(x)
+z <- rlnorm(x)
+
+plot_dat <- data.frame(x = rep(x,2), y=c(y,z), "distrib" = c(rep("norm",1000),rep("logn",1000)))
+ggplot(plot_dat) +
+    geom_density(aes(x=y)) +
+    facet_grid(~distrib)
+
+
+
+```
+
+
+
+
+
+
+
 

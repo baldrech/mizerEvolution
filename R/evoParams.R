@@ -296,7 +296,7 @@ finalTouch <- function(saveFolder,params,t_max)
 #' }
 evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1, # params and initCondition cannot be both null at same time, need to specify that
                        mutation = 2, trait = "w_mat", initPool = 0, initSpread = 5, alien = 0,
-                       alien_init_n = NULL,
+                       alien_init_n = NULL, trait_range = NULL,
                        saveFolder = file.path(tempdir(), "simTemp"), effort = 0)
 {
 
@@ -564,17 +564,26 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
           {
           #produce alien
           print("alien trying to invade ecosystem")
-          newSp <- mySim@params@species_params[sample(1:dim(mySim@params@species_params)[1],1),] # for now randomly select a species present and heavily change some parameters
+          newSp <- alien_synthesis(trait_range = trait_range)
+          # newSp <- mySim@params@species_params[sample(1:dim(mySim@params@species_params)[1],1),] # for now randomly select a species present and heavily change some parameters
           newSp$species <- factor(as.character(max(as.numeric(mySim@params@species_params$species))+1), levels = max(as.numeric(mySim@params@species_params$species))+1) # new species name
+          # newSp$w_inf <- sample(10^(seq(log10(min(mySim@params@species_params$w_inf)), log10(max(mySim@params@species_params$w_inf)), length.out = 100 )),1) # randomly select a size between min and max, log balanced
+          # newSp$w_mat <- .25*newSp$w_inf
+          # newSp$ks <- abs(newSp$ks + rnorm(1, 0, newSp$zeta * newSp$ks))
+          # newSp$beta <- abs(newSp$beta + rnorm(1, 0, newSp$zeta * newSp$beta * 5))
+          # newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, newSp$zeta * newSp$sigma * 3))
+          # newSp$erepro <- abs(newSp$erepro + rnorm(1, 0, newSp$zeta * newSp$erepro))
+          # TODO automatically fill belon slots
+          newSp$R_max <- 10 # need to implement something better
+          newSp$ea_int <- 0
+          newSp$ca_int <- 0
+          newSp$zeta <- .2
+          newSp$fc <- .25
+          newSp$f0 <- .6
+          newSp$w_min_idx <- 1
+          newSp$lineage <- factor(as.character(max(as.numeric(mySim@params@species_params$lineage))+1), levels = max(as.numeric(mySim@params@species_params$lineage))+1)
           newSp$pop <- t_event[iSim-1]
           newSp$ext <- FALSE
-          newSp$w_inf <- sample(10^(seq(log10(min(mySim@params@species_params$w_inf)), log10(max(mySim@params@species_params$w_inf)), length.out = 100 )),1) # randomly select a size between min and max, log balanced
-          newSp$w_mat <- .25*newSp$w_inf
-          newSp$ks <- abs(newSp$ks + rnorm(1, 0, newSp$zeta * newSp$ks))
-          newSp$beta <- abs(newSp$beta + rnorm(1, 0, newSp$zeta * newSp$beta * 5))
-          newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, newSp$zeta * newSp$sigma * 3))
-          newSp$erepro <- abs(newSp$erepro + rnorm(1, 0, newSp$zeta * newSp$erepro))
-          newSp$lineage <- factor(as.character(max(as.numeric(mySim@params@species_params$lineage))+1), levels = max(as.numeric(mySim@params@species_params$lineage))+1)
           # when creating alien randomly, might need to test their survivability first, in case of crazy values
           } else if (is.data.frame(alien))
           {
@@ -627,6 +636,8 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
 
 
           mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
+
+          print(mySim@params@species_params)
           # print("alien invaded the ecosystem")
         }
 
@@ -1065,6 +1076,67 @@ extinctionRDD <- function(rdi, species_params, ...) {
   if(sum(which(rdd <= 1e-30))) rdd[which(rdd <= 1e-30)] <- 0 # if any of the rdd is under threshold, set it to 0
   return(rdd)
 }
+
+
+#' function generating new alien species
+#'
+#' @description
+#' Function uses a range of trait to produce alien
+#' Default range of trait is based on North Sea
+#' parameters but can be supplied by user
+#'
+#' @param trait_range a dataframe containing the
+#' parameters to change and their accepted values.
+#' Default is NULL, leading to the use of the NS_params
+#' object
+#' @param n An integer to know the number of aliens to
+#' generate
+#'
+#' @export
+#TODO add more default mizer params
+
+alien_synthesis <- function(trait_range, n = 1){
+
+  if(is.null(trait_range)) # using NS_params
+  {
+    trait_range <- data.frame("trait" = c("w_inf", "betaS","betaL", "sigma", "k_vb", "ks","eta"),
+                              "distribution" = c("lnorm","norm", "norm","norm","norm","norm","norm"),
+                              "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530),
+                              "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
+  }
+
+  for(iAlien in 1:n) # for n number of alien
+  {
+    # for(iRow in dim(trait_range)[1]) # go through each row of the trait df
+    # {
+    # hard to make it user fool proof so going to focus on default df for now
+
+    w_inf <- sigma <- k_vb <- ks <- eta <- beta <- -1 # initialisation for while loop
+
+    while(w_inf <0) w_inf <- rlnorm(1, trait_range$mean[1], trait_range$sd[1])
+    while(sigma <0)    sigma <- rnorm(1, trait_range$mean[4], trait_range$sd[4])
+    while(k_vb <0)    k_vb <- rnorm(1, trait_range$mean[5], trait_range$sd[5])
+    while(ks <0)    ks <- rnorm(1, trait_range$mean[6], trait_range$sd[6])
+    while(eta <0.027)    eta <- rnorm(1, trait_range$mean[7], trait_range$sd[7]) # eta can get really small in NS_params, just making a threshold at the min value of the ecosystem
+    while(beta <0)
+    {
+      betaS <- rnorm(1, trait_range$mean[2], trait_range$sd[2])
+      betaL <- rnorm(1, trait_range$mean[3], trait_range$sd[3])
+      beta <- sample(c(betaS,betaL),1)
+    }
+    w_mat <- w_inf * eta
+
+    species_df <- data.frame(
+      "w_inf" = w_inf,
+      "w_mat" = w_mat,
+      "beta" = beta,
+      "sigma" = sigma,
+      "k_vb" = k_vb,
+      "ks" = ks)
+  }
+  return(species_df)
+}
+
 
 
 #' tempFun is a function that takes temperature parameters (temperature, t_ref, t_d) and physiological parameters (w, Ea, c_a)

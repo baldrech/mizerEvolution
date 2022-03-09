@@ -37,8 +37,7 @@ evoParams(
   egg_size_scaling = FALSE,
   resource_scaling = FALSE,
   perfect_scaling = FALSE,
-  specificParams = NULL,
-  interactionMatrix = NULL,
+  updateParams = NULL,
   ea_int = 0,
   ca_int = 0
 )
@@ -140,9 +139,7 @@ present in the same size range.}
 abundance, growth before reproduction and death are perfect power laws. In
 particular all other scaling corrections are turned on.}
 
-\item{specificParams}{...}
-
-\item{interactionMatrix}{...}
+\item{updateParams}{...}
 
 \item{ea_int}{...}
 
