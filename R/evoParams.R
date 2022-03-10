@@ -1134,8 +1134,8 @@ alien_synthesis <- function(trait_range, n = 1){
       "k_vb" = k_vb,
       "ks" = ks)
   }
-  print("alien embryo")
-  print(species_df)
+  # print("alien embryo")
+  # print(species_df)
 
   return(species_df)
 }
