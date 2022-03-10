@@ -177,6 +177,21 @@ ggplot(plot_dat) +
 
 
 
+## testing invasions
+
+```{r}
+
+params <- evoParams(updateParams = NS_params)
+
+sim <- evoProject(params = params, mutation = 0, alien = 5, t_max = 1000)
+
+
+```
+
+List of errors
+
+Some of your species have an maximum size larger than max_w
+Error in get_h_default(params) : Could not calculate h
 
 
 

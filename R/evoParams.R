@@ -1113,7 +1113,7 @@ alien_synthesis <- function(trait_range, n = 1){
 
     w_inf <- sigma <- k_vb <- ks <- eta <- beta <- -1 # initialisation for while loop
 
-    while(w_inf <0) w_inf <- rlnorm(1, trait_range$mean[1], trait_range$sd[1])
+    while(w_inf <0 || w_inf >10000) w_inf <- rlnorm(1, trait_range$mean[1], trait_range$sd[1]) #TODO remove size limit or make it a var
     while(sigma <0)    sigma <- rnorm(1, trait_range$mean[4], trait_range$sd[4])
     while(k_vb <0)    k_vb <- rnorm(1, trait_range$mean[5], trait_range$sd[5])
     while(ks <0)    ks <- rnorm(1, trait_range$mean[6], trait_range$sd[6])
@@ -1134,6 +1134,9 @@ alien_synthesis <- function(trait_range, n = 1){
       "k_vb" = k_vb,
       "ks" = ks)
   }
+  print("alien embryo")
+  print(species_df)
+
   return(species_df)
 }
 
