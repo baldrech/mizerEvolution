@@ -637,7 +637,7 @@ evoProject <- function(initCondition = NULL, params = NULL,t_max = 100, dt = 0.1
 
           mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
 
-          print(mySim@params@species_params)
+          # print(mySim@params@species_params)
           # print("alien invaded the ecosystem")
         }
 
@@ -1099,10 +1099,15 @@ alien_synthesis <- function(trait_range, n = 1){
 
   if(is.null(trait_range)) # using NS_params
   {
-    trait_range <- data.frame("trait" = c("w_inf", "betaS","betaL", "sigma", "k_vb", "ks","eta"),
-                              "distribution" = c("lnorm","norm", "norm","norm","norm","norm","norm"),
-                              "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530),
-                              "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
+    # trait_range <- data.frame("trait" = c("w_inf", "betaS","betaL", "sigma", "k_vb", "ks","eta"),
+    #                           "distribution" = c("lnorm","norm", "norm","norm","norm","norm","norm"),
+    #                           "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530),
+    #                           "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
+
+    trait_range <- data.frame("trait" = c("w_inf", "beta", "sigma", "k_vb", "ks","eta"),
+                              "distribution" = c("lnorm","uform", "uform","uform","uform","norm"),
+                              "var1" = c(6.7648459,10,0.8,0.1,2.8,0.12071530),
+                              "var2" = c(2.2524833,400000,3.2,1,13,0.11480856),row.names = 1)
   }
 
   for(iAlien in 1:n) # for n number of alien
@@ -1113,17 +1118,13 @@ alien_synthesis <- function(trait_range, n = 1){
 
     w_inf <- sigma <- k_vb <- ks <- eta <- beta <- -1 # initialisation for while loop
 
-    while(w_inf <0 || w_inf >10000) w_inf <- rlnorm(1, trait_range$mean[1], trait_range$sd[1]) #TODO remove size limit or make it a var
-    while(sigma <0)    sigma <- rnorm(1, trait_range$mean[4], trait_range$sd[4])
-    while(k_vb <0)    k_vb <- rnorm(1, trait_range$mean[5], trait_range$sd[5])
-    while(ks <0)    ks <- rnorm(1, trait_range$mean[6], trait_range$sd[6])
-    while(eta <0.027)    eta <- rnorm(1, trait_range$mean[7], trait_range$sd[7]) # eta can get really small in NS_params, just making a threshold at the min value of the ecosystem
-    while(beta <0)
-    {
-      betaS <- rnorm(1, trait_range$mean[2], trait_range$sd[2])
-      betaL <- rnorm(1, trait_range$mean[3], trait_range$sd[3])
-      beta <- sample(c(betaS,betaL),1)
-    }
+    while(w_inf <0 || w_inf >10000) w_inf <- rlnorm(1, trait_range["w_inf",]$var1, trait_range["w_inf",]$var2) #TODO remove size limit or make it a var
+    while(beta <0) beta <- runif(1, trait_range["beta",]$var1, trait_range["beta",]$var2)
+    while(sigma <0)    sigma <- runif(1, trait_range["sigma",]$var1, trait_range["sigma",]$var2)
+    while(k_vb <0)    k_vb <- runif(1, trait_range["k_vb",]$var1, trait_range["k_vb",]$var2)
+    while(ks <0)    ks <- runif(1, trait_range["ks",]$var1, trait_range["ks",]$var2)
+    while(eta <0.027)    eta <- rnorm(1, trait_range["eta",]$var1, trait_range["eta",]$var2) # eta can get really small in NS_params, just making a threshold at the min value of the ecosystem
+
     w_mat <- w_inf * eta
 
     species_df <- data.frame(
