@@ -546,7 +546,7 @@ evoProject <- function(params = NULL, initCondition = NULL, t_max = 100, dt = 0.
           # newSp$sigma <- abs(newSp$sigma + rnorm(1, 0, newSp$zeta * newSp$sigma * 3))
           # newSp$erepro <- abs(newSp$erepro + rnorm(1, 0, newSp$zeta * newSp$erepro))
           newSp$name <- nameGenerator()
-          newSp$R_max <- resource_params(mySim@params)$kappa * newSp$w_inf^-1
+          if(is.infinite(mySim@params@species_params$R_max[1])) newSp$R_max <- Inf else newSp$R_max <- resource_params(mySim@params)$kappa * newSp$w_inf^-1
           # TODO automatically fill below slots
           newSp$ea_int <- 0
           newSp$ca_int <- 0
@@ -1046,6 +1046,11 @@ extinctionRDD <- function(rdi, species_params, ...) {
     if (sum(rdiSp) != 0)
       rdiNormal = rdiNormal + rdiSp / sum(rdiSp)
   }
+
+  # if no Rmax is used (assuming that if one Rmax is set to Inf, all of them are)
+  if(sum(is.infinite(species_params$R_max))){
+    rdd <- rdi
+  } else {
   r_maxN = species_params$R_max * rdiNormal # apply the scaling to rmax
 
   for (i in 1:length(r_maxN)) # do not want to divide by 0 so replacing the 0 value by the original rmax (does not matter as if there was a 0 value, it means that the rmax is going to be multiplied by 0)
@@ -1053,6 +1058,7 @@ extinctionRDD <- function(rdi, species_params, ...) {
       r_maxN[i] = 1
 
   rdd <- rdi / (1 + rdi/r_maxN)
+  }
   if(sum(which(rdd <= 1e-30))) rdd[which(rdd <= 1e-30)] <- 0 # if any of the rdd is under threshold, set it to 0
   return(rdd)
 }

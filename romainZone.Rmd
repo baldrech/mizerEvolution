@@ -356,4 +356,16 @@ sim_test <- evoProject(test, alien = 5)
 
 ```
 
+Testing no Rmax
+
+```{r}
+params <- evoParams(updateParams = NS_params)
+params@species_params$R_max <- Inf
+sim <- evoProject(params = params, mutation = 0, alien = 5, t_max = 200)
+
+plotBiomass(sim)
+```
+
+
+
 
