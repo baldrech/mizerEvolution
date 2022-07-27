@@ -113,7 +113,11 @@ evoParams <- function(no_sp = 11,
                       updateParams = NULL,
                       # interactionMatrix = NULL,
                       ea_int = 0, # temperature parameters
-                      ca_int = 0
+                      ca_int = 0,
+                      ed_int = 0,
+                      cd_int = 0,
+                      t_ref = 0,
+                      t_d = 0
 ) {
 
 
@@ -154,8 +158,12 @@ evoParams <- function(no_sp = 11,
     params@species_params$lineage <- as.factor(1:no_sp) # parameter to remember the origin species of the phenotypes
     params@species_params$name <- nameGenerator(no_sp)
     # temperature parameters
-    params@species_params$ea_int <- ea_int
-    params@species_params$ca_int <- ca_int
+    # params@species_params$ea_int <- ea_int
+    # params@species_params$ca_int <- ca_int
+    # params@species_params$ed_int <- ed_int
+    # params@species_params$cd_int <- cd_int
+    # params@species_params$t_d <- t_d
+    # params@species_params$t_ref <- t_ref
 
   } else {
     # if the species column has characters instead of numeric it becomes annoying
@@ -191,11 +199,15 @@ evoParams <- function(no_sp = 11,
   # temperature parameters
   params@species_params$ea_int <- ea_int
   params@species_params$ca_int <- ca_int
+  params@species_params$ed_int <- ed_int
+  params@species_params$cd_int <- cd_int
+  params@species_params$t_d <- t_d
+  params@species_params$t_ref <- t_ref
 
   return(params)
 }
 
-# this function calculate the distance bewteen neighbouring values of a vector
+# this function calculate the distance between neighboring values of a vector
 neighbourDistance <- function(x)
 {
   y <- vector("numeric", length = length(x))
@@ -548,8 +560,8 @@ evoProject <- function(params = NULL, initCondition = NULL, t_max = 100, dt = 0.
           newSp$name <- nameGenerator()
           if(is.infinite(mySim@params@species_params$R_max[1])) newSp$R_max <- Inf else newSp$R_max <- resource_params(mySim@params)$kappa * newSp$w_inf^-1
           # TODO automatically fill below slots
-          newSp$ea_int <- 0
           newSp$ca_int <- 0
+          newSp$cd_int <- 0
           newSp$zeta <- .2
           newSp$fc <- .25
           newSp$f0 <- .6
@@ -841,7 +853,7 @@ evoProject <- function(params = NULL, initCondition = NULL, t_max = 100, dt = 0.
           rownames(init_n)[length(rownames((init_n)))] <- as.character(newSp$species) # update the name of the mutant accordingly
 
           # print("new phenotype implemented")
-
+# print(mySim@params@other_params)
           mySim@params <- addSpecies(params = mySim@params, species_params = newSp, init_n= init_n)
         }
       }
@@ -955,6 +967,11 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   p@rr_pp <- params@rr_pp
   p@resource_dynamics <- params@resource_dynamics
   p@resource_params <- params@resource_params
+
+  # Add the changes to other_params and rates
+  p@other_params <- params@other_params
+  p@rates_funcs <- params@rates_funcs
+
   # Preserve comment
   comment(p) <- comment(params)
   # initial solution ----
@@ -1090,10 +1107,10 @@ alien_synthesis <- function(trait_range, n = 1){
     #                           "mean" = c(6.7648459,186.22222,243488.33,1.7166667,0.44408333,6.2893097,0.12071530),
     #                           "sd" = c(2.2524833,176.59733,144374.82,0.5742144,0.27293481,2.5737627,0.11480856))
 
-    trait_range <- data.frame("trait" = c("w_inf", "beta", "sigma", "k_vb", "ks","eta"),
-                              "distribution" = c("lnorm","uform", "uform","uform","uform","norm"),
-                              "var1" = c(6.7648459,10,0.8,0.1,2.8,0.12071530),
-                              "var2" = c(2.2524833,400000,3.2,1,13,0.11480856),row.names = 1)
+    trait_range <- data.frame("trait" = c("w_inf", "beta", "sigma", "k_vb", "ks","eta","ea_int","ed_int","t_ref", "t_d"),
+                              "distribution" = c("lnorm","uform", "uform","uform","uform","norm","uform","uform","uform","uform"),
+                              "var1" = c(6.7648459,10,0.8,0.1,2.8,0.12071530,0.1,1,0,5),
+                              "var2" = c(2.2524833,400000,3.2,1,13,0.11480856,5,15,25,35),row.names = 1)
   }
 
   for(iAlien in 1:n) # for n number of alien
@@ -1104,7 +1121,7 @@ alien_synthesis <- function(trait_range, n = 1){
 
     # for beta, range is wide so most values are high and low values are rarely taken. Using logscale to circumvent
 
-    w_inf <- sigma <- k_vb <- ks <- eta <- beta <- -1 # initialization for while loop
+    w_inf <- sigma <- k_vb <- ks <- eta <- beta <- ea_int <- ed_int <- t_ref <- t_d <- -1 # initialization for while loop
 
     while(w_inf <0 || w_inf >10000) w_inf <- rlnorm(1, trait_range["w_inf",]$var1, trait_range["w_inf",]$var2) #TODO remove size limit or make it a var
     while(beta <0) beta <- runif(1, log10(trait_range["beta",]$var1), log10(trait_range["beta",]$var2))
@@ -1112,6 +1129,10 @@ alien_synthesis <- function(trait_range, n = 1){
     while(k_vb <0)    k_vb <- runif(1, trait_range["k_vb",]$var1, trait_range["k_vb",]$var2)
     while(ks <0)    ks <- runif(1, trait_range["ks",]$var1, trait_range["ks",]$var2)
     while(eta <0.027)    eta <- rnorm(1, trait_range["eta",]$var1, trait_range["eta",]$var2) # eta can get really small in NS_params, just making a threshold at the min value of the ecosystem
+    while(ea_int <0)    ea_int <- runif(1, trait_range["ea_int",]$var1, trait_range["ea_int",]$var2)
+    while(ed_int < ea_int)    ed_int <- runif(1, trait_range["ed_int",]$var1, trait_range["ed_int",]$var2)
+    while(t_ref <0)    t_ref <- runif(1, trait_range["t_ref",]$var1, trait_range["t_ref",]$var2)
+    while(t_d <t_ref)    t_d <- runif(1, trait_range["t_d",]$var1, trait_range["t_d",]$var2)
 
     w_mat <- w_inf * eta
     beta <- 10^beta
@@ -1122,7 +1143,11 @@ alien_synthesis <- function(trait_range, n = 1){
       "beta" = beta,
       "sigma" = sigma,
       "k_vb" = k_vb,
-      "ks" = ks)
+      "ks" = ks,
+      "ea_int" = ea_int,
+      "ed_int" = ed_int,
+      "t_ref" = t_ref,
+      "t_d" = t_d)
   }
   # print("alien embryo")
   # print(species_df)
