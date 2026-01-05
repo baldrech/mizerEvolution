@@ -3,9 +3,9 @@ Introduction to mizerEvolution
 
 ## Overview
 
-The mizerEvolution package is an extension of the mizer package (ref)
+The mizerEvolution package is an extension of the mizer package (https://github.com/sizespectrum/mizer)
 and simulate evolutionary processes within a size-structured model.
-Below are described the X steps to use this package wich are described
+Below are described the 5 steps to use this package which are described
 more in details further down.
 
 1.  [Installing mizerEvolution](#installing-mizerevolution).
@@ -41,7 +41,7 @@ code for mizerEvolution is hosted on
 ## Setting the model parameters
 
 As with Mizer, you first need to create an object of
-`class ? MizerParams`. At the moment, the wrapper function `evoParams()`
+`class MizerParams`. At the moment, the wrapper function `evoParams()`
 helps you create this object. It is a tweaked version of
 `newTraitParams` which add the necessary parameters to support species
 evolution, therefore all the default parameters from Mizer are found
@@ -97,8 +97,8 @@ from previously saved simulations.
 ## Exploring the results
 
 After a simulation has been run, the results can be examined using a
-range of `?plotting_functions`, `?summary_functions` and
-`?indicator_functions`. The `plot()` function combines several of these
+range of `plotting_functions`, `summary_functions` and
+`indicator_functions`. The `plot()` function combines several of these
 plots into one:
 
 ``` r

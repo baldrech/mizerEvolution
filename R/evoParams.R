@@ -233,14 +233,14 @@ finalTouch <- function(saveFolder,params,t_max)
   biomassPP <- array(NA, dim = c(t_max+1,no_w_pp), dimnames = list("time" = 1:(t_max+1), "w" = params@w_full))
   effort <- array(0, dim = c(t_max+1,length(unique(params@gear_params$gear))), dimnames = list("time" = 1:(t_max+1), "gear" = unique(params@gear_params$gear)))
 
-  sim_start = 1
+  sim_start <- 1
   for(iRun in 1:length(dir(saveFolder)))
   {
     tempRun <- readRDS(paste(saveFolder,"/run",iRun,".rds",sep=""))
     biomass[(sim_start):(sim_start-1+dim(tempRun@n)[1]),1:dim(tempRun@n)[2],] <- tempRun@n
     biomassPP[(sim_start):(sim_start-1+dim(tempRun@n)[1]),] <- tempRun@n_pp
     effort[(sim_start):(sim_start-1+dim(tempRun@n)[1]),] <- tempRun@effort
-    sim_start = sim_start-1+dim(tempRun@n)[1]
+    sim_start <- sim_start-1+dim(tempRun@n)[1]
   }
 
   # reconstruct the mizer object; the last tempRun loaded contains the right @params
@@ -264,14 +264,14 @@ finalTouch <- function(saveFolder,params,t_max)
   for(iSpecies in tempRun@params@species_params$species)
   {
     itime <- dim(tempRun@n)[1]
-    count = 0
+    count <- 0
     while(sum(tempRun@n[itime,iSpecies,])<=1e-30 && count < dim(tempRun@n)[1])
     {
-      count = count +1
+      count <- count +1
       # print("species")
       # print(iSpecies)
       # print(itime)
-      itime = itime - 1
+      itime <- itime - 1
       tempRun@params@species_params$ext[as.numeric(iSpecies)] <- itime
       # print("extinction")
       # print(tempRun@params@species_params$ext)
@@ -930,7 +930,7 @@ addSpecies <- function(params, species_params, interaction, defaultInteraction =
   # fishing params | need to update them here as the default contruction functions will use wrong values / names
   params@gear_params <- rbind(params@gear_params,params@gear_params[species_params$lineage,]) #copy catchability of parent
   levels(params@gear_params$species) <- c(levels(params@gear_params$species),as.character(species_params$species)) # add new factor level (new mutant)
-  params@gear_params$species[dim(params@gear_params)[1]] <- species_params$species # correct the mutant name
+  params@gear_params$species[dim(params@gear_params)[1]] <- as.character(species_params$species) # correct the mutant name
 
   # new params object ----
   # TODO check updated GUstav version for any mismatch with gear, effort, resource, etc
